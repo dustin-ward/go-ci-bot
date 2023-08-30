@@ -4,11 +4,16 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os/exec"
-	"time"
+
+	"test-org-gozbot/auth"
+	"test-org-gozbot/checks"
 
 	"github.com/google/go-github/v50/github"
-    "test-org-gozbot/auth"
+)
+
+var (
+	STATUS_IN_PROGRESS string = "in_progress"
+	STATUS_COMPLETED   string = "completed"
 )
 
 func CheckRunEventHandler(deliveryID string, eventName string, event *github.CheckRunEvent) error {
@@ -16,12 +21,12 @@ func CheckRunEventHandler(deliveryID string, eventName string, event *github.Che
 
 	switch event.GetAction() {
 	case "created":
-		err := doCheckRun(event, "GOZ Build")
+		err := doCheckRun(event)
 		if err != nil {
 			return fmt.Errorf("doCheckRun:", err)
 		}
 	case "rerequested":
-		err := createCheckRun(event, "GOZ Build")
+		err := createCheckRun(event, event.GetCheckRun().GetName())
 		if err != nil {
 			return fmt.Errorf("createCheckRun:", err)
 		}
@@ -33,26 +38,26 @@ func CheckRunEventHandler(deliveryID string, eventName string, event *github.Che
 }
 
 func createCheckRun(event any, name string) error {
-    var installID int64
-    var owner string
-    var repo string
-    var sha string
-    switch t := event.(type) {
-        case *github.CheckSuiteEvent:
-            se := event.(*github.CheckSuiteEvent)
-            installID = se.GetInstallation().GetID()
-            owner = se.GetRepo().GetOwner().GetLogin()
-            repo = se.GetRepo().GetName()
-            sha = se.GetCheckSuite().GetHeadSHA()
-        case *github.CheckRunEvent:
-            re := event.(*github.CheckRunEvent)
-            installID = re.GetInstallation().GetID()
-            owner = re.GetRepo().GetOwner().GetLogin()
-            repo = re.GetRepo().GetName()
-            sha = re.GetCheckRun().GetHeadSHA()
-        default:
-            return fmt.Errorf("createCheckRun: unknown event type:", t)
-    }
+	var installID int64
+	var owner string
+	var repo string
+	var sha string
+	switch t := event.(type) {
+	case *github.CheckSuiteEvent:
+		se := event.(*github.CheckSuiteEvent)
+		installID = se.GetInstallation().GetID()
+		owner = se.GetRepo().GetOwner().GetLogin()
+		repo = se.GetRepo().GetName()
+		sha = se.GetCheckSuite().GetHeadSHA()
+	case *github.CheckRunEvent:
+		re := event.(*github.CheckRunEvent)
+		installID = re.GetInstallation().GetID()
+		owner = re.GetRepo().GetOwner().GetLogin()
+		repo = re.GetRepo().GetName()
+		sha = re.GetCheckRun().GetHeadSHA()
+	default:
+		return fmt.Errorf("createCheckRun: unknown event type:", t)
+	}
 
 	client, err := auth.CreateClient(installID)
 	if err != nil {
@@ -75,20 +80,18 @@ func createCheckRun(event any, name string) error {
 	return nil
 }
 
-func doCheckRun(event *github.CheckRunEvent, name string) error {
-    installID := event.GetInstallation().GetID()
-    owner := event.GetRepo().GetOwner().GetLogin()
-    repo := event.GetRepo().GetName()
-    checkRunID := event.GetCheckRun().GetID()
+func doCheckRun(event *github.CheckRunEvent) error {
+	installID := event.GetInstallation().GetID()
+	owner := event.GetRepo().GetOwner().GetLogin()
+	repo := event.GetRepo().GetName()
+	name := event.GetCheckRun().GetName()
+	checkRunID := event.GetCheckRun().GetID()
 
 	client, err := auth.CreateClient(installID)
 	if err != nil {
 		return err
 	}
 
-	s := "in_progress"
-	s1 := "completed"
-	s2 := "success"
 	_, _, err = client.Checks.UpdateCheckRun(
 		context.TODO(),
 		owner,
@@ -96,34 +99,27 @@ func doCheckRun(event *github.CheckRunEvent, name string) error {
 		checkRunID,
 		github.UpdateCheckRunOptions{
 			Name:   name,
-			Status: &s,
+			Status: &STATUS_IN_PROGRESS,
 		},
 	)
 	if err != nil {
 		return err
 	}
-	title := "Results"
-	text := "No issues here!"
 
-	log.Println("Starting Code Exec...")
-
-	time.Sleep(4*time.Second)
-	cmd := exec.Command("./random")
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("cmd.Start:", err)
-	}
-	if err := cmd.Wait(); err != nil {
-		if _, ok := err.(*exec.ExitError); ok {
-            log.Println("random failed:", err)
-			s2 = "failure"
-			text = "This test failed on purpose, re-run it :)"
-		} else {
-			return fmt.Errorf("cmd.Wait:", err)
-		}
+	var output *github.CheckRunOutput
+	var conclusion string
+	switch name {
+	case "GOZ Build":
+		output, conclusion = checks.Build()
+	case "GOZ Test":
+		output, conclusion = checks.Build()
+	case "GOZ PAX'd + Artifactory":
+		output, conclusion = checks.Build()
+	default:
+		output, conclusion = checks.Undef()
+		log.Println("WARNING: unknown check name: '%s'", name)
 	}
 
-	summary := "test-summary: " + s2
-	output := github.CheckRunOutput{Title: &title, Text: &text, Summary: &summary}
 	_, _, err = client.Checks.UpdateCheckRun(
 		context.TODO(),
 		owner,
@@ -131,9 +127,9 @@ func doCheckRun(event *github.CheckRunEvent, name string) error {
 		checkRunID,
 		github.UpdateCheckRunOptions{
 			Name:       name,
-			Status:     &s1,
-			Conclusion: &s2,
-			Output:     &output,
+			Status:     &STATUS_COMPLETED,
+			Conclusion: &conclusion,
+			Output:     output,
 		},
 	)
 	if err != nil {

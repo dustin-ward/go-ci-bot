@@ -21,6 +21,14 @@ func CheckSuiteEventHandler(deliveryID string, eventName string, event *github.C
 		if err != nil {
 			return err
 		}
+		err = createCheckRun(event, "GOZ Test")
+		if err != nil {
+			return err
+		}
+		err = createCheckRun(event, "GOZ PAX'd + Artifactory")
+		if err != nil {
+			return err
+		}
 
 	default:
 		log.Println("Unhandled action:", *event.Action)

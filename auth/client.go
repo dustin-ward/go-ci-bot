@@ -4,48 +4,41 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"os"
+	"test-org-gozbot/config"
 	"time"
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v62/github"
 	"golang.org/x/oauth2"
 )
 
-var (
-	gitHost  = "https://github.ibm.com/api/v3"
-	appID    = int64(2206)
-	certPath = "./private-key.pem"
-)
-
-func CreateClient(installID int64) (*github.Client, error) {
-	privatePem, err := os.ReadFile(certPath)
-	if err != nil {
-		log.Fatalf("failed to read pem: %v", err)
-	}
-
-	itr, err := ghinstallation.NewAppsTransport(http.DefaultTransport, appID, privatePem)
+func CreateClient() (*github.Client, error) {
+	itr, err := ghinstallation.NewAppsTransportKeyFromFile(
+		http.DefaultTransport,
+		config.AppID(),
+		config.CertPath(),
+	)
 	if err != nil {
 		log.Fatalf("faild to create app transport: %v\n", err)
 	}
-	itr.BaseURL = gitHost
+	itr.BaseURL = config.GHEHost()
 
 	//create git client with app transport
-	client, err := github.NewEnterpriseClient(
-		gitHost,
-		gitHost,
+	client, err := github.NewClient(
 		&http.Client{
 			Transport: itr,
 			Timeout:   time.Second * 30,
-		})
+		},
+	).WithEnterpriseURLs(config.GHEHost(), config.GHEHost())
 	if err != nil {
 		log.Fatalf("faild to create git client for app: %v\n", err)
 	}
 
 	token, _, err := client.Apps.CreateInstallationToken(
 		context.Background(),
-		installID,
-		&github.InstallationTokenOptions{})
+		config.InstallID(),
+		nil,
+	)
 	if err != nil {
 		log.Fatalf("failed to create installation token: %v\n", err)
 	}
@@ -55,6 +48,6 @@ func CreateClient(installID int64) (*github.Client, error) {
 	)
 	oAuthClient := oauth2.NewClient(context.Background(), ts)
 
-	apiClient, err := github.NewEnterpriseClient(gitHost, gitHost, oAuthClient)
+	apiClient, err := github.NewClient(oAuthClient).WithEnterpriseURLs(config.GHEHost(), config.GHEHost())
 	return apiClient, err
 }

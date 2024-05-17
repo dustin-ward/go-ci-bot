@@ -3,10 +3,10 @@ package handlers
 import (
 	"log"
 
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v62/github"
 )
 
-func CheckSuiteEventHandler(deliveryID string, eventName string, event *github.CheckSuiteEvent) error {
+func CheckSuiteEventHandler(event *github.Event) error {
 	log.Println("CHECK SUITE EVENT:", *event.Action)
 
 	switch *event.Action {

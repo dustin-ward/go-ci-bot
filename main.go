@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"test-org-gozbot/auth"
+	"test-org-gozbot/buildqueue"
 	"test-org-gozbot/config"
 	"test-org-gozbot/handlers"
 
@@ -26,6 +27,9 @@ func main() {
 	if err != nil {
 		log.Fatal("Auth: ", err)
 	}
+
+	// Create build queue
+	buildqueue.Init(5)
 
 	// Poll for events
 	events, _, err := apiClient.Activity.ListRepositoryEvents(context.TODO(), config.Owner(), config.Repo(), nil)

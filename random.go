@@ -6,5 +6,5 @@ import (
 )
 
 func main() {
-	os.Exit(rand.Intn(1))
+	os.Exit(rand.Intn(2))
 }

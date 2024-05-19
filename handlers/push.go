@@ -4,9 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"test-org-gozbot/checks"
+	"test-org-gozbot/buildqueue"
 	"test-org-gozbot/config"
-	"time"
 
 	"github.com/google/go-github/v62/github"
 )
@@ -29,23 +28,18 @@ func HandlePushEvent(apiClient *github.Client, event *github.PushEvent) error {
 				pr.GetNumber(),
 				pr.GetTitle(),
 				headCommit.GetAuthor().GetLogin(),
-				headCommit.GetSHA(),
+				headCommit.GetSHA()[:6],
 			)
-            log.Println("Adding to build queue...")
 
-			checkRun, _, err := apiClient.Checks.CreateCheckRun(context.TODO(), config.Owner(), config.Repo(),
-				github.CreateCheckRunOptions{
-					Name:      "z/OS Build & Test",
-					HeadSHA:   headCommit.GetSHA(),
-					Status:    &checks.STATUS_QUEUED,
-					StartedAt: &github.Timestamp{time.Now()},
-				},
-			)
+			ok, err := buildqueue.Push(apiClient, pr.GetNumber(), headCommit.GetSHA(), headCommit.GetAuthor().GetLogin())
 			if err != nil {
 				return err
 			}
-
-			_ = checkRun
+			if ok {
+				log.Println("Added to build queue")
+			} else {
+				log.Println("Not added to build queue")
+			}
 		}
 	}
 

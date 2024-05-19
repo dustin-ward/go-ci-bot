@@ -47,6 +47,10 @@ func Poll(apiClient *github.Client, ticker *time.Ticker, lastPollTime time.Time,
 				)
 
 				switch p := payload.(type) {
+                case *github.PullRequestEvent:
+                    if err := handlers.HandlePullRequestEvent(apiClient, p); err != nil {
+                        log.Fatal("HandlePullRequestEvent ", err)
+                    }
 				case *github.PushEvent:
 					if err := handlers.HandlePushEvent(apiClient, p); err != nil {
 						log.Fatal("HandlePushEvent: ", err)

@@ -4,9 +4,8 @@ import (
 	"context"
 	"log"
 	"regexp"
-	"test-org-gozbot/checks"
+	"test-org-gozbot/buildqueue"
 	"test-org-gozbot/config"
-	"time"
 
 	"github.com/google/go-github/v62/github"
 )
@@ -29,23 +28,15 @@ func HandleIssueCommentEvent(apiClient *github.Client, event *github.IssueCommen
 			event.GetComment().GetUser().GetLogin(),
 		)
 
-		title := "z/OS Build & Test"
-		summary := "In Queue"
-		msg := "This commit has been added to the build queue. More information will appear here once the build has started"
-		checkRun, _, err := apiClient.Checks.CreateCheckRun(context.TODO(), config.Owner(), config.Repo(),
-			github.CreateCheckRunOptions{
-				Name:      title,
-				HeadSHA:   pr.GetHead().GetSHA(),
-				Status:    &checks.STATUS_QUEUED,
-				StartedAt: &github.Timestamp{time.Now()},
-				Output:    &github.CheckRunOutput{Title: &title, Summary: &summary, Text: &msg},
-			},
-		)
+		ok, err := buildqueue.Push(apiClient, pr.GetNumber(), pr.GetHead().GetSHA(), event.GetComment().GetUser().GetLogin())
 		if err != nil {
 			return err
 		}
-
-		_ = checkRun
+		if ok {
+			log.Println("Added to build queue")
+		} else {
+			log.Println("Not added to build queue")
+		}
 	}
 
 	return nil

@@ -1,44 +1,38 @@
 package buildqueue
 
 import (
-	"fmt"
-	"log"
+	"context"
+	"test-org-gozbot/checks"
+	"test-org-gozbot/config"
+	"time"
 
 	"github.com/google/go-github/v62/github"
 )
 
-type buildq_t struct {
-	commitSHA string
-    ref string
+type Build struct {
+    PR          int
+	SHA         string
+	SubmittedBy string
 }
 
-var build_queue []buildq_t
-
-func Init(init_cap int) {
-	build_queue = make([]buildq_t, 0, init_cap)
-}
-
-func Push(event *github.PushEvent) {
-	build_queue = append(build_queue, buildq_t{event.GetHead(), event.GetRef()})
-    log.Printf("Push Added to Build Queue: %s#%s\n", event.GetRef(), event.GetHead())
-    fmt.Println(build_queue)
-}
-
-func Pop() string {
-	if len(build_queue) == 0 {
-		return ""
+func Push(apiClient *github.Client, PR int, SHA, SubmittedBy string) (bool, error) {
+    title := "z/OS Build & Test"
+    summary := "In Queue"
+    msg := "This commit has been added to the build queue. More information will appear here once the build has started"
+    checkRun, _, err := apiClient.Checks.CreateCheckRun(context.TODO(), config.Owner(), config.Repo(),
+        github.CreateCheckRunOptions{
+            Name:      title,
+            HeadSHA:   SHA,
+            Status:    &checks.STATUS_QUEUED,
+            StartedAt: &github.Timestamp{time.Now()},
+            Output:    &github.CheckRunOutput{Title: &title, Summary: &summary, Text: &msg},
+        },
+    )
+	if err != nil {
+		return false, err
 	}
-    commitSHA := build_queue[0].commitSHA
-	build_queue = build_queue[1:]
-	log.Println("Removed from Build Queue:", commitSHA)
-	return commitSHA
-}
 
-func RefInQueue(ref string) bool {
-	for _, bq := range build_queue {
-		if bq.ref == ref {
-			return true
-		}
-	}
-	return false
+	_ = checkRun
+
+	return true, nil
 }

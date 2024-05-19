@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"test-org-gozbot/buildqueue"
 
 	"github.com/google/go-github/v62/github"
 )
@@ -13,11 +12,11 @@ func HandlePushEvent(apiClient *github.Client, event *github.PushEvent) error {
 	fmt.Println("\tRef:", event.GetRef())
 	fmt.Println("\tSize:", event.GetSize())
 
-    if !buildqueue.RefInQueue(event.GetRef()) {
-        buildqueue.Push(event)
-    }
+	// if !buildqueue.RefInQueue(event.GetRef()) {
+	//     buildqueue.Push(event)
+	// }
 
-    return nil
+	return nil
 
 	// checkRun, _, err := apiClient.Checks.CreateCheckRun(context.TODO(), config.Owner(), config.Repo(),
 	// 	github.CreateCheckRunOptions{

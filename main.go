@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"test-org-gozbot/auth"
+	"test-org-gozbot/build"
 	"test-org-gozbot/config"
 	"test-org-gozbot/events"
 	"time"
@@ -12,6 +13,7 @@ import (
 
 const (
 	EventPollInterval = time.Second * 10
+	BuildPollInterval = time.Second * 1
 )
 
 func main() {
@@ -41,13 +43,18 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Start build poller
+	buildTicker := time.NewTicker(BuildPollInterval)
+	stopBuilds := make(chan struct{})
+	go build.Poll(apiClient, buildTicker, stopBuilds, stopMain)
+
 	// Poll for events
 	eventTicker := time.NewTicker(EventPollInterval)
+    stopPoll := make(chan struct{})
 	lastPollTime := time.Now()
-	stopPoll := make(chan struct{})
-	go events.Poll(apiClient, eventTicker, lastPollTime, stopPoll, stopMain)
+	go events.Poll(apiClient, eventTicker, lastPollTime, stopPoll, stopBuilds)
 
 	//TODO:Perform any takedown operations needed
-	<-stopMain
+	<-stopPoll
 	log.Println("Shutting Down...")
 }

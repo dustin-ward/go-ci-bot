@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"log"
-	"test-org-gozbot/buildqueue"
+	"test-org-gozbot/build"
 
 	"github.com/google/go-github/v62/github"
 )
@@ -18,7 +18,7 @@ func HandlePullRequestEvent(apiClient *github.Client, event *github.PullRequestE
 			pr.GetHead().GetSHA()[:6],
 		)
 
-		ok, err := buildqueue.Push(apiClient, pr.GetNumber(), pr.GetHead().GetSHA(), pr.GetHead().GetUser().GetLogin())
+		ok, err := build.Push(apiClient, pr.GetNumber(), pr.GetHead().GetSHA(), pr.GetHead().GetUser().GetLogin())
 		if err != nil {
 			return err
 		}

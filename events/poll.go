@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"test-org-gozbot/config"
 	"test-org-gozbot/handlers"
 	"time"
@@ -12,11 +11,10 @@ import (
 	"github.com/google/go-github/v62/github"
 )
 
-func Poll(apiClient *github.Client, ticker *time.Ticker, lastPollTime time.Time, stopPoll chan struct{}, stopMain chan os.Signal) {
+func Poll(apiClient *github.Client, ticker *time.Ticker, lastPollTime time.Time, stopPoll, stopBuilds chan struct{}) {
 	for {
 		select {
 		case <-ticker.C:
-			log.Println("tick")
 			events, _, err := apiClient.Activity.ListRepositoryEvents(context.TODO(), config.Owner(), config.Repo(), nil)
 			pollTime := time.Now()
 			if err != nil {
@@ -47,10 +45,10 @@ func Poll(apiClient *github.Client, ticker *time.Ticker, lastPollTime time.Time,
 				)
 
 				switch p := payload.(type) {
-                case *github.PullRequestEvent:
-                    if err := handlers.HandlePullRequestEvent(apiClient, p); err != nil {
-                        log.Fatal("HandlePullRequestEvent ", err)
-                    }
+				case *github.PullRequestEvent:
+					if err := handlers.HandlePullRequestEvent(apiClient, p); err != nil {
+						log.Fatal("HandlePullRequestEvent ", err)
+					}
 				case *github.PushEvent:
 					if err := handlers.HandlePushEvent(apiClient, p); err != nil {
 						log.Fatal("HandlePushEvent: ", err)
@@ -67,9 +65,9 @@ func Poll(apiClient *github.Client, ticker *time.Ticker, lastPollTime time.Time,
 				}
 			}
 			lastPollTime = pollTime
-		case <-stopPoll:
+		case <-stopBuilds:
 			// End Program
-			close(stopMain)
+			close(stopPoll)
 			return
 		}
 	}

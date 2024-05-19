@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 	"regexp"
-	"test-org-gozbot/buildqueue"
+	"test-org-gozbot/build"
 	"test-org-gozbot/config"
 
 	"github.com/google/go-github/v62/github"
@@ -28,7 +28,7 @@ func HandleIssueCommentEvent(apiClient *github.Client, event *github.IssueCommen
 			event.GetComment().GetUser().GetLogin(),
 		)
 
-		ok, err := buildqueue.Push(apiClient, pr.GetNumber(), pr.GetHead().GetSHA(), event.GetComment().GetUser().GetLogin())
+		ok, err := build.Push(apiClient, pr.GetNumber(), pr.GetHead().GetSHA(), event.GetComment().GetUser().GetLogin())
 		if err != nil {
 			return err
 		}

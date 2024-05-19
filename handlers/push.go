@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"test-org-gozbot/buildqueue"
+	"test-org-gozbot/build"
 	"test-org-gozbot/config"
 
 	"github.com/google/go-github/v62/github"
@@ -31,7 +31,7 @@ func HandlePushEvent(apiClient *github.Client, event *github.PushEvent) error {
 				headCommit.GetSHA()[:6],
 			)
 
-			ok, err := buildqueue.Push(apiClient, pr.GetNumber(), headCommit.GetSHA(), headCommit.GetAuthor().GetLogin())
+			ok, err := build.Push(apiClient, pr.GetNumber(), headCommit.GetSHA(), headCommit.GetAuthor().GetLogin())
 			if err != nil {
 				return err
 			}
@@ -44,38 +44,4 @@ func HandlePushEvent(apiClient *github.Client, event *github.PushEvent) error {
 	}
 
 	return nil
-
-	// title := "TEST RUN"
-	// summary := "This is the summary"
-	// body := "Body text here... The run is now in progress"
-	// checkRun, _, err = apiClient.Checks.UpdateCheckRun(context.TODO(), config.Owner(), config.Repo(),
-	// 	checkRun.GetID(),
-	// 	github.UpdateCheckRunOptions{
-	// 		Name:   "z/OS Build",
-	// 		Status: &checks.STATUS_IN_PROGRESS,
-	// Output: &github.CheckRunOutput{Title: &title, Summary: &summary, Text: &body},
-	// 	},
-	// )
-	// if err != nil {
-	// 	log.Fatal("Update Check Run 1: ", err)
-	// }
-
-	// time.Sleep(15 * time.Second)
-
-	// body += "\n\nRun Completed"
-	// checkRun, _, err = apiClient.Checks.UpdateCheckRun(context.TODO(), config.Owner(), config.Repo(),
-	// 	checkRun.GetID(),
-	// 	github.UpdateCheckRunOptions{
-	// 		Name:        "z/OS Build",
-	// 		Status:      &checks.STATUS_COMPLETED,
-	// 		Conclusion:  &checks.CONCLUSION_FAILURE,
-	// 		CompletedAt: &github.Timestamp{time.Now()},
-	// Output: &github.CheckRunOutput{Title: &title, Summary: &summary, Text: &body},
-	// 	},
-	// )
-	// if err != nil {
-	// 	log.Fatal("Update Check Run 2: ", err)
-	// }
-
-	// return nil
 }

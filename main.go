@@ -28,6 +28,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Auth: ", err)
 	}
+	log.Println("GOZBOT has started")
 
 	// Wait for interrupt to end program
 	stopMain := make(chan os.Signal, 1)

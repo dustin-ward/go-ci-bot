@@ -27,14 +27,6 @@ func Cleanup(apiClient *github.Client) error {
 		switch p := payload.(type) {
 		case *github.PullRequestEvent:
 			pr := p.GetPullRequest()
-			log.Printf("Pull Request Event: %s [#%d] - %s (%s) %s\n",
-				p.GetAction(),
-				pr.GetNumber(),
-				pr.GetTitle(),
-				pr.GetUser().GetLogin(),
-				pr.GetState(),
-			)
-
 			appId := config.AppID()
 			res, _, err := apiClient.Checks.ListCheckRunsForRef(
 				context.TODO(),
@@ -50,14 +42,6 @@ func Cleanup(apiClient *github.Client) error {
 			}
 
 			for _, checkRun := range res.CheckRuns {
-				log.Printf("Found unfinished check run: %s - %s[%d] %s %s\n",
-					checkRun.GetName(),
-					checkRun.GetHeadSHA(),
-					checkRun.GetID(),
-					checkRun.GetStatus(),
-					checkRun.GetStartedAt(),
-				)
-
 				if checkRun.GetStatus() == "completed" {
 					continue
 				}
@@ -84,14 +68,6 @@ func Cleanup(apiClient *github.Client) error {
 
 				log.Println("Cancelled check run:", checkRun.GetID())
 			}
-		case *github.PushEvent:
-		default:
-			log.Printf("Unhandled stale event: %s[%s] - %s (%s)\n",
-				e.GetType(),
-				e.GetID(),
-				e.GetActor().GetLogin(),
-				e.GetCreatedAt(),
-			)
 		}
 	}
 

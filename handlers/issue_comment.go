@@ -16,14 +16,6 @@ var (
 )
 
 func HandleIssueCommentEvent(apiClient *github.Client, event *github.IssueCommentEvent) error {
-	// fmt.Printf("Issue Comment Event: %s\n", event.GetAction())
-	// fmt.Println("  #:", event.GetIssue().GetNumber())
-	// fmt.Println("  State:", event.GetIssue().GetState())
-	// fmt.Println("  Title:", event.GetIssue().GetTitle())
-	// fmt.Println("  IsPR:", event.GetIssue().IsPullRequest())
-	// fmt.Println("  Author:", event.GetComment().GetUser().GetLogin())
-	// fmt.Println("  Body:", event.GetComment().GetBody())
-
 	if event.GetIssue().IsPullRequest() && reSpinBuild.MatchString(event.GetComment().GetBody()) {
 		pr, _, err := apiClient.PullRequests.Get(context.TODO(), config.Owner(), config.Repo(), event.GetIssue().GetNumber())
 		if err != nil {
@@ -37,12 +29,16 @@ func HandleIssueCommentEvent(apiClient *github.Client, event *github.IssueCommen
 			event.GetComment().GetUser().GetLogin(),
 		)
 
+		title := "z/OS Build & Test"
+		summary := "In Queue"
+		msg := "This commit has been added to the build queue. More information will appear here once the build has started"
 		checkRun, _, err := apiClient.Checks.CreateCheckRun(context.TODO(), config.Owner(), config.Repo(),
 			github.CreateCheckRunOptions{
-				Name:      "z/OS Build & Test",
+				Name:      title,
 				HeadSHA:   pr.GetHead().GetSHA(),
 				Status:    &checks.STATUS_QUEUED,
 				StartedAt: &github.Timestamp{time.Now()},
+				Output:    &github.CheckRunOutput{Title: &title, Summary: &summary, Text: &msg},
 			},
 		)
 		if err != nil {

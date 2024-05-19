@@ -55,7 +55,7 @@ func Cleanup(apiClient *github.Client) error {
 					config.Repo(),
 					checkRun.GetID(),
 					github.UpdateCheckRunOptions{
-						Name:        checkRun.GetName(),
+						Name:        title,
 						Status:      &checks.STATUS_COMPLETED,
 						Conclusion:  &checks.CONCLUSION_CANCELLED,
 						CompletedAt: &github.Timestamp{time.Now()},

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math/rand"
+	"os/exec"
 	"test-org-gozbot/checks"
 	"test-org-gozbot/config"
 	"time"
@@ -14,6 +14,7 @@ import (
 
 type Build struct {
 	PR          int
+	Branch      string
 	SHA         string
 	SubmittedBy string
 
@@ -21,7 +22,7 @@ type Build struct {
 }
 
 func (b *Build) Start(apiClient *github.Client) {
-	log.Printf("Doing build #%d (%s) - %s\n", b.PR, b.SHA[:6], b.SubmittedBy)
+	log.Printf("Doing build #%d/%s (%s) - %s\n", b.PR, b.Branch, b.SHA[:6], b.SubmittedBy)
 
 	buildMachine := "zoscan56"
 
@@ -48,7 +49,7 @@ func (b *Build) Start(apiClient *github.Client) {
 	} else {
 		conclusion = checks.CONCLUSION_FAILURE
 	}
-    log.Printf("Build Completed [%s] #%d (%s) - %s\n", conclusion, b.PR, b.SHA[:6], b.SubmittedBy)
+	log.Printf("Build Completed [%s] #%d/%s (%s) - %s\n", conclusion, b.PR, b.Branch, b.SHA[:6], b.SubmittedBy)
 
 	summary = "Completed"
 	body = "The build has completed. Output:\n" + output
@@ -68,11 +69,23 @@ func (b *Build) Start(apiClient *github.Client) {
 }
 
 func (b *Build) Do() (output string, ok bool) {
-    time.Sleep(time.Second*10)
-	n := rand.Intn(100)
-	output = fmt.Sprintf("Random number was: %d\n", n)
-
-	ok = n >= 25
+	cmd := exec.Command(
+		"ssh",
+		"dustinw@zoscan56.pok.stglabs.ibm.com",
+		fmt.Sprintf("~/gozbot-build-test.sh %s/%s %s",
+			config.Owner(),
+			config.Repo(),
+            b.Branch,
+		),
+	)
+	cmdOutput, err := cmd.CombinedOutput()
+	output = string(cmdOutput)
+	if err != nil {
+		output += err.Error()
+		ok = false
+		return
+	}
+	ok = true
 
 	return
 }

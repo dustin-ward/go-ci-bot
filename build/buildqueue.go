@@ -21,25 +21,25 @@ func init() {
 func Push(apiClient *github.Client, PR int, SHA, SubmittedBy string) (ok bool, err error) {
 	mu.Lock()
 	defer mu.Unlock()
-    ok = false
-    
-    // Make sure PR is mergeable first
-    pr, _, err := apiClient.PullRequests.Get(context.TODO(), config.Owner(), config.Repo(), PR)
-    if err != nil {
-        return
-    }
-    if !pr.GetMergeable() {
-        msg := "⚠️ PR is not mergeable. Please resolve conflicts"
-        _, _, err = apiClient.Issues.CreateComment(context.TODO(), config.Owner(), config.Repo(), PR,
-            &github.IssueComment{Body: &msg},
-        )
-        return
-    }
+	ok = false
 
-    // See if any builds for this SHA are already queued
+	// Make sure PR is mergeable first
+	pr, _, err := apiClient.PullRequests.Get(context.TODO(), config.Owner(), config.Repo(), PR)
+	if err != nil {
+		return
+	}
+	if !pr.GetMergeable() {
+		msg := "⚠️ PR is not mergeable. Please resolve conflicts"
+		_, _, err = apiClient.Issues.CreateComment(context.TODO(), config.Owner(), config.Repo(), PR,
+			&github.IssueComment{Body: &msg},
+		)
+		return
+	}
+
+	// See if any builds for this SHA are already queued
 	for _, build := range build_queue {
 		if build.SHA == SHA {
-            return
+			return
 		}
 	}
 
@@ -61,12 +61,13 @@ func Push(apiClient *github.Client, PR int, SHA, SubmittedBy string) (ok bool, e
 
 	build_queue = append(build_queue, Build{
 		PR:          PR,
+		Branch:      pr.GetHead().GetRef(),
 		SHA:         SHA,
 		SubmittedBy: SubmittedBy,
 		CheckRun:    checkRun,
 	})
 
-    ok = true
+	ok = true
 	return
 }
 
@@ -76,8 +77,8 @@ func Pop() (build *Build, ok bool) {
 	build = nil
 	ok = false
 
-    // If any builds later in the queue exist for this PR, we should
-    // cancel the current build and pop the next build instead.
+	// If any builds later in the queue exist for this PR, we should
+	// cancel the current build and pop the next build instead.
 	for len(build_queue) > 0 {
 		build = &build_queue[0]
 		build_queue = build_queue[1:]

@@ -20,7 +20,7 @@ func main() {
 	config.NewConfig(
 		"https://github.ibm.com",
 		"test-org-gozbot",
-		"goz-workflow-demo",
+		"go",
 		"./private-key.pem",
 		2206,
 		19342,

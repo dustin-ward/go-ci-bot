@@ -24,6 +24,10 @@ type Build struct {
 	CheckRun *github.CheckRun
 }
 
+const (
+	connString = "zosgo@zoscan59.pok.stglabs.ibm.com"
+)
+
 var (
 	title             = "z/OS Build & Test"
 	summaryInProgress = "In Progress..."
@@ -37,7 +41,7 @@ var (
 func (b *Build) Start(apiClient *github.Client) {
 	log.Printf("Doing build #%d/%s (%s) - %s\n", b.PR, b.Branch, b.SHA[:6], b.SubmittedBy)
 
-	buildMachine := "zoscan56"
+	buildMachine := "zoscan59"
 
 	body := "The build is now in progress. Machine: " + buildMachine
 	var err error
@@ -84,7 +88,7 @@ func (b *Build) Do(apiClient *github.Client) (output string, ok bool) {
 	ok = true
 	cmd := exec.Command(
 		"ssh",
-		"dustinw@zoscan56.pok.stglabs.ibm.com",
+		connString,
 		fmt.Sprintf("~/gozbot-build-test.sh %s/%s %s",
 			config.Owner(),
 			config.Repo(),
@@ -95,6 +99,7 @@ func (b *Build) Do(apiClient *github.Client) (output string, ok bool) {
 	stderr, _ := cmd.StderrPipe()
 	multi := io.MultiReader(stdout, stderr)
 	outputDone := make(chan interface{})
+	stopUpdates := false
 
 	err := cmd.Start()
 	if err != nil {
@@ -111,6 +116,13 @@ func (b *Build) Do(apiClient *github.Client) (output string, ok bool) {
 			txt := scanner.Text()
 			outputMu.Lock()
 			output += "\n" + txt
+			// Github CheckRun output limit is 65535 character.
+			//TODO: Do something better than this
+			if len(output) >= 65500 {
+				output += "OUTPUT TRUNCATED"
+				stopUpdates = true
+				return
+			}
 			outputMu.Unlock()
 		}
 		if err := scanner.Err(); err != nil {
@@ -120,9 +132,14 @@ func (b *Build) Do(apiClient *github.Client) (output string, ok bool) {
 
 	// Github Updater
 	go func() {
+		// Wait 5 seconds before doing the first update. We actually get some output this way
+		time.Sleep(time.Second * 5)
 		for {
-			time.Sleep(GithubUpdateInterval)
+			if stopUpdates {
+				return
+			}
 
+			prevCheckRun := b.CheckRun
 			outputMu.Lock()
 			b.CheckRun, _, err = apiClient.Checks.UpdateCheckRun(context.TODO(), config.Owner(), config.Repo(),
 				b.CheckRun.GetID(),
@@ -135,12 +152,17 @@ func (b *Build) Do(apiClient *github.Client) (output string, ok bool) {
 			outputMu.Unlock()
 			if err != nil {
 				log.Println("Error updating github build status: ", err)
+				b.CheckRun = prevCheckRun
 			}
+
+			// Wait
+			time.Sleep(GithubUpdateInterval)
 		}
 	}()
 
 	err = cmd.Wait()
 	<-outputDone
+	stopUpdates = true
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			output += fmt.Sprintf("\nExit Code: %d", exitError.ExitCode())

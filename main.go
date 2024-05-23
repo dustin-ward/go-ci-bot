@@ -21,7 +21,7 @@ func main() {
 		"https://github.ibm.com",
 		"test-org-gozbot",
 		// "goz-workflow-demo",
-        "go",
+		"go",
 		"./private-key.pem",
 		2206,
 		19342,
@@ -51,7 +51,7 @@ func main() {
 
 	// Poll for events
 	eventTicker := time.NewTicker(EventPollInterval)
-    stopPoll := make(chan struct{})
+	stopPoll := make(chan struct{})
 	lastPollTime := time.Now()
 	go events.Poll(apiClient, eventTicker, lastPollTime, stopPoll, stopBuilds)
 

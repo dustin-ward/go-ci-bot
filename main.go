@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"test-org-gozbot/auth"
 	"test-org-gozbot/build"
 	"test-org-gozbot/config"
@@ -20,7 +22,6 @@ func main() {
 	config.NewConfig(
 		"https://github.ibm.com",
 		"test-org-gozbot",
-		// "goz-workflow-demo",
 		"go",
 		"./private-key.pem",
 		2206,
@@ -44,18 +45,57 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Goroutine communication
+	var wg sync.WaitGroup
+	ctx, cancel := context.WithCancel(context.Background())
+
 	// Start build poller
-	buildTicker := time.NewTicker(BuildPollInterval)
-	stopBuilds := make(chan struct{})
-	go build.Poll(apiClient, buildTicker, stopBuilds, stopMain)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		ticker := time.NewTicker(BuildPollInterval)
+
+		for {
+			build.Poll(apiClient)
+
+			// Wait for next poll or end.
+			// Do this after so that the first poll happens right on init instead of 60 seconds after
+			select {
+			case <-ticker.C:
+				continue
+			case <-ctx.Done():
+				// End Program
+				return
+			}
+		}
+	}()
 
 	// Poll for events
-	eventTicker := time.NewTicker(EventPollInterval)
-	stopPoll := make(chan struct{})
-	lastPollTime := time.Now()
-	go events.Poll(apiClient, eventTicker, lastPollTime, stopPoll, stopBuilds)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		ticker := time.NewTicker(EventPollInterval)
+		lastPollTime := time.Now() // Starting time
+
+		for {
+            // Events poll returns time right after poll was completed
+			lastPollTime = events.Poll(apiClient, lastPollTime)
+
+			// Wait for next poll or end.
+			// Do this after so that the first poll happens right on init instead of 60 seconds after
+			select {
+			case <-ticker.C:
+				continue
+			case <-ctx.Done():
+				// End Program
+				return
+			}
+		}
+	}()
 
 	//TODO:Perform any takedown operations needed
-	<-stopPoll
+	<-stopMain
+	cancel()
+	wg.Wait()
 	log.Println("Shutting Down...")
 }

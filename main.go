@@ -29,7 +29,7 @@ func main() {
 
 	// Cancel any checks that were previously queued
 	log.Println("Cleaning Stale Events...")
-    err := events.Cleanup()
+	err := events.Cleanup()
 	if err != nil {
 		log.Fatal(err)
 	}

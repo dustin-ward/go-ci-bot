@@ -1,13 +1,9 @@
 package build
 
 import (
-	"context"
 	"log"
 	"sync"
-	"test-org-gozbot/config"
 	"test-org-gozbot/gh"
-
-	"github.com/google/go-github/v62/github"
 )
 
 var build_queue []Build
@@ -17,21 +13,19 @@ func init() {
 	build_queue = make([]Build, 0)
 }
 
-func Push(apiClient *github.Client, PR int, SHA, SubmittedBy string) (ok bool, err error) {
+func Push(PR int, SHA, SubmittedBy string) (ok bool, err error) {
 	mu.Lock()
 	defer mu.Unlock()
 	ok = false
 
 	// Make sure PR is mergeable first
-	pr, _, err := apiClient.PullRequests.Get(context.TODO(), config.Owner(), config.Repo(), PR)
+	pr, err := gh.GetPullRequest(PR)
 	if err != nil {
 		return
 	}
 	if !pr.GetMergeable() {
 		msg := "⚠️ PR is not mergeable. Please resolve conflicts"
-		_, _, err = apiClient.Issues.CreateComment(context.TODO(), config.Owner(), config.Repo(), PR,
-			&github.IssueComment{Body: &msg},
-		)
+		_, err = gh.CreateComment(pr.GetNumber(), msg)
 		return
 	}
 

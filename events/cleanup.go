@@ -2,7 +2,6 @@ package events
 
 import (
 	"log"
-	"test-org-gozbot/checks"
 	"test-org-gozbot/gh"
 )
 
@@ -25,7 +24,7 @@ func Cleanup() error {
 
 			summary := "Check Run Cancelled"
 			msg := "Stale Check Run - GOZBOT has been terminated since this run has been queued"
-			_, err := gh.CompleteCheckRun(checkRun, checks.CONCLUSION_CANCELLED, summary, msg)
+			_, err := gh.CompleteCheckRun(checkRun, gh.CHECK_CONCLUSION_CANCELLED, summary, msg)
 			if err != nil {
 				return err
 			}

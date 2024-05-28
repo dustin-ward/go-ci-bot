@@ -8,18 +8,19 @@ import (
 	"github.com/google/go-github/v62/github"
 )
 
-func GetRepositoryEvents() ([]*github.Event, error) {
+func CreateComment(PR int, body string) (*github.IssueComment, error) {
 	client, err := auth.GetClient()
 	if err != nil {
-		return []*github.Event{}, err
+		return nil, err
 	}
 
-	events, _, err := client.Activity.ListRepositoryEvents(
+	comment, _, err := client.Issues.CreateComment(
 		context.TODO(),
 		config.Owner(),
 		config.Repo(),
-		nil,
+		PR,
+		&github.IssueComment{Body: &body},
 	)
 
-	return events, err
+	return comment, err
 }

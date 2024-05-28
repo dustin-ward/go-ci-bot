@@ -3,7 +3,7 @@ package gh
 import (
 	"context"
 	"test-org-gozbot/config"
-    "test-org-gozbot/gh/auth"
+	"test-org-gozbot/gh/auth"
 
 	"github.com/google/go-github/v62/github"
 )
@@ -20,9 +20,6 @@ func GetBranches() ([]*github.Branch, error) {
 		config.Repo(),
 		nil,
 	)
-	if err != nil {
-		return []*github.Branch{}, err
-	}
 
-	return branches, nil
+	return branches, err
 }

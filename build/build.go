@@ -8,7 +8,6 @@ import (
 	"log"
 	"os/exec"
 	"sync"
-	"test-org-gozbot/checks"
 	"test-org-gozbot/config"
 	"test-org-gozbot/gh"
 	"time"
@@ -55,9 +54,9 @@ func (b *Build) Start() {
 	output, ok := b.Do()
 	var conclusion string
 	if ok {
-		conclusion = checks.CONCLUSION_SUCCESS
+		conclusion = gh.CHECK_CONCLUSION_SUCCESS
 	} else {
-		conclusion = checks.CONCLUSION_FAILURE
+		conclusion = gh.CHECK_CONCLUSION_FAILURE
 	}
 	log.Printf("Build Completed [%s] #%d/%s (%s) - %s\n", conclusion, b.PR, b.Branch, b.SHA[:6], b.SubmittedBy)
 

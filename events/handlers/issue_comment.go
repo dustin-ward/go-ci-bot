@@ -1,12 +1,10 @@
 package handlers
 
 import (
-	"context"
 	"log"
 	"regexp"
 	"test-org-gozbot/build"
-	"test-org-gozbot/config"
-	"test-org-gozbot/gh/auth"
+	"test-org-gozbot/gh"
 
 	"github.com/google/go-github/v62/github"
 )
@@ -15,35 +13,40 @@ var (
 	reSpinBuild = regexp.MustCompile("(?i)re[- ]*(spin|test|build)")
 )
 
-func HandleIssueCommentEvent(event *github.IssueCommentEvent) error {
-	//TODO: Remove
-	apiClient, err := auth.GetClient()
+func handleIssueCommentEvent(event *github.IssueCommentEvent) error {
+	if event.GetIssue().IsPullRequest() && reSpinBuild.MatchString(event.GetComment().GetBody()) {
+		return respinBuild(event)
+	}
+
+	return nil
+}
+
+func respinBuild(event *github.IssueCommentEvent) error {
+	pr, err := gh.GetPullRequest(event.GetIssue().GetNumber())
 	if err != nil {
 		return err
 	}
 
-	if event.GetIssue().IsPullRequest() && reSpinBuild.MatchString(event.GetComment().GetBody()) {
-		pr, _, err := apiClient.PullRequests.Get(context.TODO(), config.Owner(), config.Repo(), event.GetIssue().GetNumber())
-		if err != nil {
-			return err
-		}
+	log.Printf("Re-Spinning build for PR#%d (%s/%s) - triggered by %s\n",
+		pr.GetNumber(),
+		pr.GetHead().GetRef(),
+		pr.GetHead().GetSHA()[:6],
+		event.GetComment().GetUser().GetLogin(),
+	)
 
-		log.Printf("Re-Spinning build for PR#%d (%s/%s) - triggered by %s\n",
-			pr.GetNumber(),
-			pr.GetHead().GetRef(),
-			pr.GetHead().GetSHA()[:6],
-			event.GetComment().GetUser().GetLogin(),
-		)
+	ok, err := build.Push(
+		pr.GetNumber(),
+		pr.GetHead().GetSHA(),
+		event.GetComment().GetUser().GetLogin(),
+	)
+	if err != nil {
+		return err
+	}
 
-		ok, err := build.Push(apiClient, pr.GetNumber(), pr.GetHead().GetSHA(), event.GetComment().GetUser().GetLogin())
-		if err != nil {
-			return err
-		}
-		if ok {
-			log.Println("Added to build queue")
-		} else {
-			log.Println("Not added to build queue")
-		}
+	if ok {
+		log.Println("Added to build queue")
+	} else {
+		log.Println("Not added to build queue")
 	}
 
 	return nil

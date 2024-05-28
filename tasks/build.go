@@ -1,4 +1,4 @@
-package build
+package tasks
 
 import (
 	"bufio"
@@ -30,6 +30,7 @@ const (
 
 var (
 	title             = "z/OS Build & Test"
+	summaryInQueue    = "In Queue..."
 	summaryInProgress = "In Progress..."
 	summaryCompleted  = "Completed"
 )
@@ -38,7 +39,7 @@ var (
 	GithubUpdateInterval = time.Second * 30
 )
 
-func (b *Build) Start() {
+func (b Build) Do() error {
 	log.Printf("Doing build #%d/%s (%s) - %s\n", b.PR, b.Branch, b.SHA[:6], b.SubmittedBy)
 
 	buildMachine := "zoscan59"
@@ -47,11 +48,10 @@ func (b *Build) Start() {
 	var err error
 	b.CheckRun, err = gh.UpdateCheckRun(b.CheckRun, summaryInProgress, body)
 	if err != nil {
-		log.Println("Error Starting Build: ", err)
-		return
+		return fmt.Errorf("Error Starting Build: %v", err)
 	}
 
-	output, ok := b.Do()
+	output, ok := b.build()
 	var conclusion string
 	if ok {
 		conclusion = gh.CHECK_CONCLUSION_SUCCESS
@@ -63,12 +63,13 @@ func (b *Build) Start() {
 	body = "The build has completed. Output:\n" + output
 	b.CheckRun, err = gh.CompleteCheckRun(b.CheckRun, conclusion, summaryCompleted, body)
 	if err != nil {
-		log.Println("Error Concluding Build: ", err)
-		return
+		return fmt.Errorf("Error Concluding Build: %v", err)
 	}
+
+	return nil
 }
 
-func (b *Build) Do() (output string, ok bool) {
+func (b *Build) build() (output string, ok bool) {
 	output = "```\n"
 	var outputMu sync.Mutex
 	ok = true
@@ -146,5 +147,47 @@ func (b *Build) Do() (output string, ok bool) {
 	}
 	output += "\n```"
 
+	return
+}
+
+func PushBuild(PR int, SHA, SubmittedBy string) (ok bool, err error) {
+	ok = false
+
+	// Make sure PR is mergeable first
+	pr, err := gh.GetPullRequest(PR)
+	if err != nil {
+		return
+	}
+	if !pr.GetMergeable() {
+		msg := "⚠️ PR is not mergeable. Please resolve conflicts"
+		_, err = gh.CreateComment(pr.GetNumber(), msg)
+		return
+	}
+
+	// See if any builds for this SHA are already queued
+	for _, t := range task_queue {
+		if build, ok := t.(Build); ok && build.SHA == SHA {
+			return false, nil
+		}
+	}
+
+	msg := "This commit has been added to the build queue. More information will appear here once the build has started"
+	checkRun, err := gh.CreateCheckRun(SHA, title, summaryInQueue, msg)
+	if err != nil {
+		return
+	}
+
+	Push(Build{
+		PR:          PR,
+		Branch:      pr.GetHead().GetRef(),
+		SHA:         SHA,
+		SubmittedBy: SubmittedBy,
+		CheckRun:    checkRun,
+	})
+	if err != nil {
+		return
+	}
+
+	ok = true
 	return
 }

@@ -3,8 +3,8 @@ package handlers
 import (
 	"log"
 	"regexp"
-	"test-org-gozbot/build"
 	"test-org-gozbot/gh"
+	"test-org-gozbot/tasks"
 
 	"github.com/google/go-github/v62/github"
 )
@@ -34,7 +34,7 @@ func respinBuild(event *github.IssueCommentEvent) error {
 		event.GetComment().GetUser().GetLogin(),
 	)
 
-	ok, err := build.Push(
+	ok, err := tasks.PushBuild(
 		pr.GetNumber(),
 		pr.GetHead().GetSHA(),
 		event.GetComment().GetUser().GetLogin(),

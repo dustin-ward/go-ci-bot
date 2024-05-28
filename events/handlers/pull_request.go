@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"log"
-	"test-org-gozbot/build"
+	"test-org-gozbot/tasks"
 
 	"github.com/google/go-github/v62/github"
 )
@@ -25,7 +25,7 @@ func registerNewPR(event *github.PullRequestEvent) error {
 		pr.GetHead().GetSHA()[:6],
 	)
 
-	ok, err := build.Push(
+	ok, err := tasks.PushBuild(
 		pr.GetNumber(),
 		pr.GetHead().GetSHA(),
 		pr.GetHead().GetUser().GetLogin(),

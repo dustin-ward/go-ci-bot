@@ -6,9 +6,9 @@ import (
 	"os"
 	"os/signal"
 	"sync"
-	"test-org-gozbot/build"
 	"test-org-gozbot/config"
 	"test-org-gozbot/events"
+	"test-org-gozbot/tasks"
 	"time"
 )
 
@@ -52,7 +52,7 @@ func main() {
 		ticker := time.NewTicker(BuildPollInterval)
 
 		for {
-			build.Poll()
+			tasks.Poll()
 
 			// Wait for next poll or end.
 			// Do this after so that the first poll happens right on init instead of 60 seconds after

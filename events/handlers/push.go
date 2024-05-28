@@ -3,8 +3,8 @@ package handlers
 import (
 	"fmt"
 	"log"
-	"test-org-gozbot/build"
 	"test-org-gozbot/gh"
+	"test-org-gozbot/tasks"
 
 	"github.com/google/go-github/v62/github"
 )
@@ -40,7 +40,8 @@ func triggerNewBuild(event *github.PushEvent, pr *github.PullRequest) error {
 		headCommit.GetSHA()[:6],
 	)
 
-	ok, err := build.Push(
+	//TODO: Redundant code here and in pull_request.go?
+	ok, err := tasks.PushBuild(
 		pr.GetNumber(),
 		headCommit.GetSHA(),
 		headCommit.GetAuthor().GetLogin(),

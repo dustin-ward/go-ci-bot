@@ -35,7 +35,7 @@ var (
 )
 
 var (
-	GithubUpdateInterval = time.Second * 60
+	GithubUpdateInterval = time.Second * 30
 )
 
 func (b *Build) Start(apiClient *github.Client) {
@@ -98,8 +98,6 @@ func (b *Build) Do(apiClient *github.Client) (output string, ok bool) {
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
 	multi := io.MultiReader(stdout, stderr)
-	outputDone := make(chan interface{})
-	stopUpdates := false
 
 	err := cmd.Start()
 	if err != nil {
@@ -108,34 +106,15 @@ func (b *Build) Do(apiClient *github.Client) (output string, ok bool) {
 		return
 	}
 
-	// Read from stdout+stderr
-	go func() {
-		defer close(outputDone)
-		scanner := bufio.NewScanner(multi)
-		for scanner.Scan() {
-			txt := scanner.Text()
-			outputMu.Lock()
-			output += "\n" + txt
-			// Github CheckRun output limit is 65535 character.
-			//TODO: Do something better than this
-			if len(output) >= 65500 {
-				output += "OUTPUT TRUNCATED"
-				stopUpdates = true
-				return
-			}
-			outputMu.Unlock()
-		}
-		if err := scanner.Err(); err != nil {
-			log.Println(err)
-		}
-	}()
-
 	// Github Updater
+	ctx, cancelUpdates := context.WithCancel(context.Background())
 	go func() {
-		// Wait 5 seconds before doing the first update. We actually get some output this way
-		time.Sleep(time.Second * 5)
+		ticker := time.NewTicker(GithubUpdateInterval)
 		for {
-			if stopUpdates {
+			select {
+			case <-ticker.C:
+				// Do update
+			case <-ctx.Done():
 				return
 			}
 
@@ -154,20 +133,34 @@ func (b *Build) Do(apiClient *github.Client) (output string, ok bool) {
 				log.Println("Error updating github build status: ", err)
 				b.CheckRun = prevCheckRun
 			}
-
-			// Wait
-			time.Sleep(GithubUpdateInterval)
 		}
 	}()
 
+	// Read from stdout+stderr
+	scanner := bufio.NewScanner(multi)
+	for scanner.Scan() {
+		txt := scanner.Text()
+		outputMu.Lock()
+		output += "\n" + txt
+		// Github CheckRun output limit is 65535 character.
+		//TODO: Do something better than this
+		if len(output) >= 65530 {
+            over := len(output) - 65530
+            output = output[over:]
+		}
+		outputMu.Unlock()
+	}
+	if err := scanner.Err(); err != nil {
+		log.Println(err)
+	}
+
 	err = cmd.Wait()
-	<-outputDone
-	stopUpdates = true
+    cancelUpdates()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			output += fmt.Sprintf("\nExit Code: %d", exitError.ExitCode())
 		} else {
-			output += fmt.Sprintf("\n%v", err)
+			output += fmt.Sprintf("\nUndefined Error: %v", err)
 			log.Println("Build Error:", err)
 		}
 		ok = false

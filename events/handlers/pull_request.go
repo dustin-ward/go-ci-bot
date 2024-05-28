@@ -3,11 +3,18 @@ package handlers
 import (
 	"log"
 	"test-org-gozbot/build"
+	"test-org-gozbot/gh/auth"
 
 	"github.com/google/go-github/v62/github"
 )
 
-func HandlePullRequestEvent(apiClient *github.Client, event *github.PullRequestEvent) error {
+func HandlePullRequestEvent(event *github.PullRequestEvent) error {
+	//TODO: Remove
+	apiClient, err := auth.GetClient()
+	if err != nil {
+		return err
+	}
+
 	action := event.GetAction()
 	if action == "opened" || action == "reopened" {
 		pr := event.GetPullRequest()

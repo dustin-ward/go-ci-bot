@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"test-org-gozbot/build"
 	"test-org-gozbot/config"
+	"test-org-gozbot/gh/auth"
 
 	"github.com/google/go-github/v62/github"
 )
@@ -14,7 +15,13 @@ var (
 	reSpinBuild = regexp.MustCompile("(?i)re[- ]*(spin|test|build)")
 )
 
-func HandleIssueCommentEvent(apiClient *github.Client, event *github.IssueCommentEvent) error {
+func HandleIssueCommentEvent(event *github.IssueCommentEvent) error {
+	//TODO: Remove
+	apiClient, err := auth.GetClient()
+	if err != nil {
+		return err
+	}
+
 	if event.GetIssue().IsPullRequest() && reSpinBuild.MatchString(event.GetComment().GetBody()) {
 		pr, _, err := apiClient.PullRequests.Get(context.TODO(), config.Owner(), config.Repo(), event.GetIssue().GetNumber())
 		if err != nil {

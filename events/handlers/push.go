@@ -6,11 +6,18 @@ import (
 	"log"
 	"test-org-gozbot/build"
 	"test-org-gozbot/config"
+	"test-org-gozbot/gh/auth"
 
 	"github.com/google/go-github/v62/github"
 )
 
-func HandlePushEvent(apiClient *github.Client, event *github.PushEvent) error {
+func HandlePushEvent(event *github.PushEvent) error {
+	//TODO: Remove
+	apiClient, err := auth.GetClient()
+	if err != nil {
+		return err
+	}
+
 	prList, _, err := apiClient.PullRequests.List(context.TODO(), config.Owner(), config.Repo(), nil)
 	if err != nil {
 		return err

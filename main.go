@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"sync"
-	"test-org-gozbot/auth"
 	"test-org-gozbot/build"
 	"test-org-gozbot/config"
 	"test-org-gozbot/events"
@@ -28,14 +27,9 @@ func main() {
 		19342,
 	)
 
-	apiClient, err := auth.CreateClient()
-	if err != nil {
-		log.Fatal("Auth: ", err)
-	}
-
 	// Cancel any checks that were previously queued
 	log.Println("Cleaning Stale Events...")
-	err = events.Cleanup(apiClient)
+    err := events.Cleanup()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -58,7 +52,7 @@ func main() {
 		ticker := time.NewTicker(BuildPollInterval)
 
 		for {
-			build.Poll(apiClient)
+			build.Poll()
 
 			// Wait for next poll or end.
 			// Do this after so that the first poll happens right on init instead of 60 seconds after
@@ -81,7 +75,7 @@ func main() {
 
 		for {
 			// Events poll returns time right after poll was completed
-			lastPollTime = events.Poll(apiClient, lastPollTime)
+			lastPollTime = events.Poll(lastPollTime)
 
 			// Wait for next poll or end.
 			// Do this after so that the first poll happens right on init instead of 60 seconds after

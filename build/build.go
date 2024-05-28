@@ -10,6 +10,7 @@ import (
 	"sync"
 	"test-org-gozbot/checks"
 	"test-org-gozbot/config"
+	"test-org-gozbot/gh"
 	"time"
 
 	"github.com/google/go-github/v62/github"
@@ -38,26 +39,20 @@ var (
 	GithubUpdateInterval = time.Second * 30
 )
 
-func (b *Build) Start(apiClient *github.Client) {
+func (b *Build) Start() {
 	log.Printf("Doing build #%d/%s (%s) - %s\n", b.PR, b.Branch, b.SHA[:6], b.SubmittedBy)
 
 	buildMachine := "zoscan59"
 
 	body := "The build is now in progress. Machine: " + buildMachine
 	var err error
-	b.CheckRun, _, err = apiClient.Checks.UpdateCheckRun(context.TODO(), config.Owner(), config.Repo(),
-		b.CheckRun.GetID(),
-		github.UpdateCheckRunOptions{
-			Name:   title,
-			Status: &checks.STATUS_IN_PROGRESS,
-			Output: &github.CheckRunOutput{Title: &title, Summary: &summaryInProgress, Text: &body},
-		},
-	)
+	b.CheckRun, err = gh.UpdateCheckRun(b.CheckRun, summaryInProgress, body)
 	if err != nil {
-		log.Fatal("Build: ", err)
+		log.Println("Error Starting Build: ", err)
+		return
 	}
 
-	output, ok := b.Do(apiClient)
+	output, ok := b.Do()
 	var conclusion string
 	if ok {
 		conclusion = checks.CONCLUSION_SUCCESS
@@ -67,22 +62,14 @@ func (b *Build) Start(apiClient *github.Client) {
 	log.Printf("Build Completed [%s] #%d/%s (%s) - %s\n", conclusion, b.PR, b.Branch, b.SHA[:6], b.SubmittedBy)
 
 	body = "The build has completed. Output:\n" + output
-	b.CheckRun, _, err = apiClient.Checks.UpdateCheckRun(context.TODO(), config.Owner(), config.Repo(),
-		b.CheckRun.GetID(),
-		github.UpdateCheckRunOptions{
-			Name:        title,
-			Status:      &checks.STATUS_COMPLETED,
-			Conclusion:  &conclusion,
-			CompletedAt: &github.Timestamp{time.Now()},
-			Output:      &github.CheckRunOutput{Title: &title, Summary: &summaryCompleted, Text: &body},
-		},
-	)
+	b.CheckRun, err = gh.CompleteCheckRun(b.CheckRun, conclusion, summaryCompleted, body)
 	if err != nil {
-		log.Fatal("Build: ", err)
+		log.Println("Error Concluding Build: ", err)
+		return
 	}
 }
 
-func (b *Build) Do(apiClient *github.Client) (output string, ok bool) {
+func (b *Build) Do() (output string, ok bool) {
 	output = "```\n"
 	var outputMu sync.Mutex
 	ok = true
@@ -120,14 +107,7 @@ func (b *Build) Do(apiClient *github.Client) (output string, ok bool) {
 
 			prevCheckRun := b.CheckRun
 			outputMu.Lock()
-			b.CheckRun, _, err = apiClient.Checks.UpdateCheckRun(context.TODO(), config.Owner(), config.Repo(),
-				b.CheckRun.GetID(),
-				github.UpdateCheckRunOptions{
-					Name:   title,
-					Status: &checks.STATUS_IN_PROGRESS,
-					Output: &github.CheckRunOutput{Title: &title, Summary: &summaryInProgress, Text: &output},
-				},
-			)
+			b.CheckRun, err = gh.UpdateCheckRun(b.CheckRun, summaryInProgress, output)
 			outputMu.Unlock()
 			if err != nil {
 				log.Println("Error updating github build status: ", err)

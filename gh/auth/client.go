@@ -12,6 +12,11 @@ import (
 	"golang.org/x/oauth2"
 )
 
+func GetClient() (*github.Client, error) {
+	//TODO: Be smarter about this...
+	return CreateClient()
+}
+
 func CreateClient() (*github.Client, error) {
 	itr, err := ghinstallation.NewAppsTransportKeyFromFile(
 		http.DefaultTransport,

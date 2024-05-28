@@ -1,18 +1,17 @@
 package events
 
 import (
-	"context"
 	"fmt"
 	"log"
-	"test-org-gozbot/config"
-	"test-org-gozbot/handlers"
+	"test-org-gozbot/events/handlers"
+	"test-org-gozbot/gh"
 	"time"
 
 	"github.com/google/go-github/v62/github"
 )
 
-func Poll(apiClient *github.Client, earliestTime time.Time) time.Time {
-	events, _, err := apiClient.Activity.ListRepositoryEvents(context.TODO(), config.Owner(), config.Repo(), nil)
+func Poll(earliestTime time.Time) time.Time {
+	events, err := gh.GetRepositoryEvents()
 	pollTime := time.Now()
 	if err != nil {
 		log.Fatal("ListRepositoryEvents: ", err)
@@ -43,15 +42,15 @@ func Poll(apiClient *github.Client, earliestTime time.Time) time.Time {
 
 		switch p := payload.(type) {
 		case *github.PullRequestEvent:
-			if err := handlers.HandlePullRequestEvent(apiClient, p); err != nil {
+			if err := handlers.HandlePullRequestEvent(p); err != nil {
 				log.Fatal("HandlePullRequestEvent ", err)
 			}
 		case *github.PushEvent:
-			if err := handlers.HandlePushEvent(apiClient, p); err != nil {
+			if err := handlers.HandlePushEvent(p); err != nil {
 				log.Fatal("HandlePushEvent: ", err)
 			}
 		case *github.IssueCommentEvent:
-			if err := handlers.HandleIssueCommentEvent(apiClient, p); err != nil {
+			if err := handlers.HandleIssueCommentEvent(p); err != nil {
 				log.Fatal("HandleIssueCommentEvent: ", err)
 			}
 		default:

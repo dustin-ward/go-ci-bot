@@ -145,8 +145,8 @@ func (b *Build) Do(apiClient *github.Client) (output string, ok bool) {
 		// Github CheckRun output limit is 65535 character.
 		//TODO: Do something better than this
 		if len(output) >= 65530 {
-            over := len(output) - 65530
-            output = output[over:]
+			over := len(output) - 65530
+			output = output[over:]
 		}
 		outputMu.Unlock()
 	}
@@ -155,7 +155,7 @@ func (b *Build) Do(apiClient *github.Client) (output string, ok bool) {
 	}
 
 	err = cmd.Wait()
-    cancelUpdates()
+	cancelUpdates()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			output += fmt.Sprintf("\nExit Code: %d", exitError.ExitCode())

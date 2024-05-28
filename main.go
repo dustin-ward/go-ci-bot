@@ -32,18 +32,20 @@ func main() {
 	if err != nil {
 		log.Fatal("Auth: ", err)
 	}
+
+	// Cancel any checks that were previously queued
+	log.Println("Cleaning Stale Events...")
+	err = events.Cleanup(apiClient)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	log.Println("GOZBOT has started")
 
 	// Wait for interrupt to end program
 	stopMain := make(chan os.Signal, 1)
 	signal.Notify(stopMain, os.Interrupt)
 	log.Println("Press Ctrl+C to exit")
-
-	// Cancel any checks that were previously queued
-	err = events.Cleanup(apiClient)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	// Goroutine communication
 	var wg sync.WaitGroup
@@ -78,7 +80,7 @@ func main() {
 		lastPollTime := time.Now() // Starting time
 
 		for {
-            // Events poll returns time right after poll was completed
+			// Events poll returns time right after poll was completed
 			lastPollTime = events.Poll(apiClient, lastPollTime)
 
 			// Wait for next poll or end.

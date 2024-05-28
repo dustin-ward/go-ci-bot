@@ -11,7 +11,7 @@ import (
 	"github.com/google/go-github/v62/github"
 )
 
-func Poll(apiClient *github.Client, earliestTime time.Time) (time.Time) {
+func Poll(apiClient *github.Client, earliestTime time.Time) time.Time {
 	events, _, err := apiClient.Activity.ListRepositoryEvents(context.TODO(), config.Owner(), config.Repo(), nil)
 	pollTime := time.Now()
 	if err != nil {
@@ -62,5 +62,5 @@ func Poll(apiClient *github.Client, earliestTime time.Time) (time.Time) {
 		}
 	}
 
-    return pollTime
+	return pollTime
 }

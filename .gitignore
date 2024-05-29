@@ -1,7 +1,7 @@
 old/
 demo-repo/
 private-key.pem
-random
-list-events
-main
 secret.key
+main
+random-exit-code
+list-events

@@ -1,32 +1,26 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
-	"test-org-gozbot/auth"
 	"test-org-gozbot/config"
+	"test-org-gozbot/gh"
 )
 
 func main() {
 	config.NewConfig(
 		"https://github.ibm.com",
 		"test-org-gozbot",
-		"goz-workflow-demo",
+		"go",
 		"./private-key.pem",
 		2206,
 		19342,
 	)
 
-	apiClient, err := auth.CreateClient()
+	events, err := gh.GetRepositoryEvents()
 	if err != nil {
-		log.Fatal("Auth: ", err)
-	}
-
-	events, _, err := apiClient.Activity.ListRepositoryEvents(context.TODO(), config.Owner(), config.Repo(), nil)
-	if err != nil {
-		log.Fatal("ListRepositoryEvents: ", err)
+		log.Fatal(err)
 	}
 	if len(events) == 0 {
 		fmt.Println("No Events")

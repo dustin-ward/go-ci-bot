@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	reSpinBuild = regexp.MustCompile("(?i)re[- ]*(spin|test|build)")
+	reSpinBuild = regexp.MustCompile("(?i)re[- ]*(spin|test|build|try)")
 )
 
 func handleIssueCommentEvent(event *github.IssueCommentEvent) error {

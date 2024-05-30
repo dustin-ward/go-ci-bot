@@ -55,8 +55,8 @@ func (e *ExampleTask) exampleWork() (output string, ok bool) {
 	time.Sleep(time.Second * 5)
 	cmd := exec.Command("./random-exit-code")
 
-    out, err := cmd.CombinedOutput()
-    output = string(out)
+	out, err := cmd.CombinedOutput()
+	output = string(out)
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			output += fmt.Sprintf("\nExit Code: %d", exitError.ExitCode())

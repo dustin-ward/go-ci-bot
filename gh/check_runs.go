@@ -2,6 +2,7 @@ package gh
 
 import (
 	"context"
+	"log"
 	"test-org-gozbot/config"
 	"test-org-gozbot/gh/auth"
 	"time"
@@ -48,6 +49,8 @@ func UpdateCheckRun(checkRun *github.CheckRun, summary, body string) (*github.Ch
 }
 
 func CompleteCheckRun(checkRun *github.CheckRun, conclusion, summary, body string) (*github.CheckRun, error) {
+	log.Println("CompleteCheckRun:", conclusion, "body len:", len(body), body[max(0, len(body)-100):])
+	log.Println("CheckRun:", checkRun.GetName(), checkRun.GetID())
 	client, err := auth.GetClient()
 	if err != nil {
 		return nil, err

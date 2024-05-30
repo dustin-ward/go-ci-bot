@@ -25,14 +25,14 @@ type Build struct {
 }
 
 const (
-	connString = "zosgo@zoscan59.pok.stglabs.ibm.com"
+	connString = "zosgo@zoscan56.pok.stglabs.ibm.com"
 )
 
 var (
-	title             = "z/OS Build & Test"
-	summaryInQueue    = "In Queue..."
-	summaryInProgress = "In Progress..."
-	summaryCompleted  = "Completed"
+	buildTitle             = "z/OS Build & Test"
+	buildSummaryInQueue    = "In Queue..."
+	buildSummaryInProgress = "In Progress..."
+	buildSummaryCompleted  = "Completed"
 )
 
 var (
@@ -42,11 +42,11 @@ var (
 func (b Build) Do() error {
 	log.Printf("Doing build #%d/%s (%s) - %s\n", b.PR, b.Branch, b.SHA[:6], b.SubmittedBy)
 
-	buildMachine := "zoscan59"
+	buildMachine := "zoscan56"
 
 	body := "The build is now in progress. Machine: " + buildMachine
 	var err error
-	b.CheckRun, err = gh.UpdateCheckRun(b.CheckRun, summaryInProgress, body)
+	b.CheckRun, err = gh.UpdateCheckRun(b.CheckRun, buildSummaryInProgress, body)
 	if err != nil {
 		return fmt.Errorf("Error Starting Build: %v", err)
 	}
@@ -60,8 +60,8 @@ func (b Build) Do() error {
 	}
 	log.Printf("Build Completed [%s] #%d/%s (%s) - %s\n", conclusion, b.PR, b.Branch, b.SHA[:6], b.SubmittedBy)
 
-	body = "The build has completed. Output:\n" + output
-	b.CheckRun, err = gh.CompleteCheckRun(b.CheckRun, conclusion, summaryCompleted, body)
+	body = fmt.Sprintf("The build has completed. Output:\n```\n%s\n```", output)
+	b.CheckRun, err = gh.CompleteCheckRun(b.CheckRun, conclusion, buildSummaryCompleted, body)
 	if err != nil {
 		return fmt.Errorf("Error Concluding Build: %v", err)
 	}
@@ -70,7 +70,6 @@ func (b Build) Do() error {
 }
 
 func (b *Build) build() (output string, ok bool) {
-	output = "```\n"
 	var outputMu sync.Mutex
 	ok = true
 	cmd := exec.Command(
@@ -88,7 +87,7 @@ func (b *Build) build() (output string, ok bool) {
 
 	err := cmd.Start()
 	if err != nil {
-		output += fmt.Sprintf("%v\n```", err)
+		output += err.Error()
 		ok = false
 		return
 	}
@@ -107,7 +106,7 @@ func (b *Build) build() (output string, ok bool) {
 
 			prevCheckRun := b.CheckRun
 			outputMu.Lock()
-			b.CheckRun, err = gh.UpdateCheckRun(b.CheckRun, summaryInProgress, output)
+			b.CheckRun, err = gh.UpdateCheckRun(b.CheckRun, buildSummaryInProgress, fmt.Sprintf("```\n%s\n```", output))
 			outputMu.Unlock()
 			if err != nil {
 				log.Println("Error updating github build status: ", err)
@@ -124,8 +123,8 @@ func (b *Build) build() (output string, ok bool) {
 		output += "\n" + txt
 		// Github CheckRun output limit is 65535 character.
 		//TODO: Do something better than this
-		if len(output) >= 65530 {
-			over := len(output) - 65530
+		if len(output) >= 65000 {
+			over := len(output) - 65000
 			output = output[over:]
 		}
 		outputMu.Unlock()
@@ -145,7 +144,6 @@ func (b *Build) build() (output string, ok bool) {
 		}
 		ok = false
 	}
-	output += "\n```"
 
 	return
 }
@@ -172,7 +170,7 @@ func PushBuild(PR int, SHA, SubmittedBy string) (ok bool, err error) {
 	}
 
 	msg := "This commit has been added to the build queue. More information will appear here once the build has started"
-	checkRun, err := gh.CreateCheckRun(SHA, title, summaryInQueue, msg)
+	checkRun, err := gh.CreateCheckRun(SHA, buildTitle, buildSummaryInQueue, msg)
 	if err != nil {
 		return
 	}

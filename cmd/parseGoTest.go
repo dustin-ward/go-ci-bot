@@ -1,30 +1,30 @@
 package main
 
 import (
-	"fmt"
-	"strings"
-	"strconv"
 	"encoding/json"
-	"io"
-	"path/filepath"
-	"os"
 	"flag"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 type JsonData struct {
-	Time string
-	Action string
+	Time    string
+	Action  string
 	Package string
-	Test string 
-	Output string 
+	Test    string
+	Output  string
 	Elapsed float64
 }
 
 func (jd *JsonData) UnmarshalJSON(b []byte) error {
-	type Alias JsonData 
+	type Alias JsonData
 	type Aux struct {
-		Test *string `json:"Test"`
-		Output *string `json:"Output"`
+		Test    *string  `json:"Test"`
+		Output  *string  `json:"Output"`
 		Elapsed *float64 `json:"Elapsed"`
 		*Alias
 	}
@@ -54,10 +54,10 @@ func (jd *JsonData) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-type TestSummary struct{
-	Pass int
-	Fail int
-	Skip int
+type TestSummary struct {
+	Pass  int
+	Fail  int
+	Skip  int
 	Total int
 
 	// each package result: package name -> the result of the package
@@ -86,12 +86,12 @@ func (ts *TestSummary) String() string {
 }
 
 type PackageResult struct {
-	Package string
-	RunTests   []string   // names of the tests that are runned. This will be to total tests that are runned
-	PassTests []string	  // names of the tests that are passed
-	FailTests []string   // names of the tests that are failed
-	SkipTests []string   // names of the tests that are skiped
-	TestOutput map[string]string  // output of each test results: test name -> testcase output
+	Package    string
+	RunTests   []string          // names of the tests that are runned. This will be to total tests that are runned
+	PassTests  []string          // names of the tests that are passed
+	FailTests  []string          // names of the tests that are failed
+	SkipTests  []string          // names of the tests that are skiped
+	TestOutput map[string]string // output of each test results: test name -> testcase output
 }
 
 func NewPackageResult(pkgName string) *PackageResult {
@@ -134,7 +134,7 @@ func (pr *PackageResult) AllTestStatus() map[string]string {
 	for _, runTest := range pr.RunTests {
 		result[runTest] = "?"
 	}
-	
+
 	// e.g: setting "testA": "pass | fail | skip"
 	setTestStatus(&result, &pr.PassTests, "pass")
 	setTestStatus(&result, &pr.FailTests, "fail")
@@ -143,8 +143,8 @@ func (pr *PackageResult) AllTestStatus() map[string]string {
 }
 
 func setTestStatus(testSet *map[string]string, statusTestSet *[]string, status string) {
-		// testSet must be init first
-		for _, test := range *statusTestSet {
+	// testSet must be init first
+	for _, test := range *statusTestSet {
 		if _, ok := (*testSet)[test]; ok {
 			(*testSet)[test] = status
 		} else {
@@ -155,7 +155,7 @@ func setTestStatus(testSet *map[string]string, statusTestSet *[]string, status s
 
 func (pr *PackageResult) String() string {
 	summaryStr := pr.Summary()
-	var sb strings.Builder 
+	var sb strings.Builder
 	sb.WriteString(summaryStr)
 
 	allTestStatus := pr.AllTestStatus()
@@ -173,8 +173,7 @@ func (pr *PackageResult) String() string {
 
 }
 
-
-func parseGoTestJson(text string) (*TestSummary, error){
+func parseGoTestJson(text string) (*TestSummary, error) {
 	jsonDecoder := json.NewDecoder(strings.NewReader(text))
 	summary := new(TestSummary)
 	summary.PackageResults = make(map[string]*PackageResult)
@@ -193,7 +192,7 @@ func parseGoTestJson(text string) (*TestSummary, error){
 			println("package name is not string")
 			continue
 		}
-		
+
 		if _, ok := summary.PackageResults[pkgName]; !ok {
 			summary.PackageResults[pkgName] = NewPackageResult(pkgName)
 		}
@@ -203,7 +202,7 @@ func parseGoTestJson(text string) (*TestSummary, error){
 			if output := data.Output; output != "" {
 				summary.PackageResults[pkgName].TestOutput[test] += output
 			} else if elapsed := data.Elapsed; elapsed >= 0 {
-					summary.PackageResults[pkgName].TestOutput[test] += "Elapsed: " + strconv.FormatFloat(elapsed, 'g', -1, 64) + "\n"
+				summary.PackageResults[pkgName].TestOutput[test] += "Elapsed: " + strconv.FormatFloat(elapsed, 'g', -1, 64) + "\n"
 			} else {
 				if _, ok := summary.PackageResults[pkgName].TestOutput[test]; ok {
 					summary.PackageResults[pkgName].TestOutput[test] += test + "\n"
@@ -212,29 +211,29 @@ func parseGoTestJson(text string) (*TestSummary, error){
 				}
 			}
 
-			// depend on the action record the test 
+			// depend on the action record the test
 			if action := data.Action; action != "" {
 				switch action {
-					case "output", "pause", "cont":
-						// do nothing. output is handle by above
-					case "run":
-						summary.Total++
-						summary.PackageResults[pkgName].RunTests = append(summary.PackageResults[pkgName].RunTests, test)
-					case "pass":
-						summary.Pass++
-						summary.PackageResults[pkgName].PassTests = append(summary.PackageResults[pkgName].PassTests, test)
-					case "fail":
-						summary.Fail++
-						summary.PackageResults[pkgName].FailTests = append(summary.PackageResults[pkgName].FailTests, test)
-					case "skip":
-						summary.Skip++
-						summary.PackageResults[pkgName].SkipTests = append(summary.PackageResults[pkgName].SkipTests, test)
-					default: 
-						println("unknow action: ", action)
+				case "output", "pause", "cont":
+					// do nothing. output is handle by above
+				case "run":
+					summary.Total++
+					summary.PackageResults[pkgName].RunTests = append(summary.PackageResults[pkgName].RunTests, test)
+				case "pass":
+					summary.Pass++
+					summary.PackageResults[pkgName].PassTests = append(summary.PackageResults[pkgName].PassTests, test)
+				case "fail":
+					summary.Fail++
+					summary.PackageResults[pkgName].FailTests = append(summary.PackageResults[pkgName].FailTests, test)
+				case "skip":
+					summary.Skip++
+					summary.PackageResults[pkgName].SkipTests = append(summary.PackageResults[pkgName].SkipTests, test)
+				default:
+					println("unknow action: ", action)
 				}
 			}
 
-		} 
+		}
 	}
 
 	return summary, nil
@@ -246,7 +245,7 @@ func isDir(path string) bool {
 		panic(err)
 	}
 
-	return fileInfo.IsDir() 
+	return fileInfo.IsDir()
 }
 
 func readFile(path string) string {
@@ -290,7 +289,7 @@ func main() {
 
 	flag.Usage = func() {
 		helpText := `the program parse the output of go test -json.
-		parse-go-test [files] [directories]` 
+		parse-go-test [files] [directories]`
 
 		fmt.Println(helpText)
 	}
@@ -353,7 +352,7 @@ func exampleUsage() {
 	fmt.Println("\n========================\n")
 	packageList := goTestSummary.TestPackageList()
 	fmt.Println("package test: ", packageList)
-	
+
 	for _, pkgName := range packageList {
 		fmt.Println("\n----------------------------------\n")
 		fmt.Println(goTestSummary.PackageResults[pkgName])

@@ -11,13 +11,13 @@ func init() {
 	task_queue = make([]Task, 0)
 }
 
-func Push(t Task) {
+func pushTask(t Task) {
 	mu.Lock()
 	task_queue = append(task_queue, t)
 	mu.Unlock()
 }
 
-func Pop() (Task, bool) {
+func popTask() (Task, bool) {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -28,11 +28,4 @@ func Pop() (Task, bool) {
 	}
 
 	return nil, false
-}
-
-func Poll() {
-	task, ok := Pop()
-	if ok {
-		task.Do()
-	}
 }

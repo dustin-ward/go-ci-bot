@@ -14,7 +14,11 @@ import (
 
 const (
 	EventPollInterval = time.Second * 10
-	BuildPollInterval = time.Second * 1
+	TaskPollInterval  = time.Second * 10
+)
+
+const (
+	NumWorkers = 2
 )
 
 func main() {
@@ -45,26 +49,30 @@ func main() {
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Start build poller
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		ticker := time.NewTicker(BuildPollInterval)
+	// Start worker goroutines
+	for _ = range NumWorkers {
+		worker := tasks.NewWorker()
+		log.Printf("Starting Worker #%04d\n", worker.ID)
 
-		for {
-			tasks.Poll()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			ticker := time.NewTicker(TaskPollInterval)
 
-			// Wait for next poll or end.
-			// Do this after so that the first poll happens right on init instead of 60 seconds after
-			select {
-			case <-ticker.C:
-				continue
-			case <-ctx.Done():
-				// End Program
-				return
+			for {
+				worker.Poll()
+
+				// Wait for next poll or end.
+				select {
+				case <-ticker.C:
+					continue
+				case <-ctx.Done():
+					// Stop worker
+					return
+				}
 			}
-		}
-	}()
+		}()
+	}
 
 	// Poll for events
 	wg.Add(1)

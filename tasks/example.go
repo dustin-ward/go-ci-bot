@@ -23,7 +23,45 @@ var (
 	exampleSummaryCompleted  = "Example - Completed"
 )
 
-func (e ExampleTask) Do() error {
+func (e ExampleTask) Enqueue() {
+	// See if any workers are already doing this task
+	for _, worker := range workerPool {
+		if worker.CurTask != nil {
+			if eTask, ok := (*worker.CurTask).(ExampleTask); ok && eTask.SHA == e.SHA {
+				log.Printf("ExampleTask not queued: A worker is already proccessing this task\n")
+				return
+			}
+		}
+	}
+
+	// See if any exampleTasks for this SHA are already queued
+	for _, t := range task_queue {
+		if eTask, ok := t.(ExampleTask); ok && eTask.SHA == e.SHA {
+			log.Printf("ExampleTask not queued: This task is already in the queue\n")
+			return
+		}
+	}
+
+	msg := "This commit has been added to the task queue. More information will appear here once the task has started"
+	var err error
+	e.CheckRun, err = gh.CreateCheckRun(e.SHA, exampleTitle, exampleSummaryInQueue, msg)
+	if err != nil {
+		log.Printf("ExampleTask not queued: error creating check run: %v\n", err)
+		return
+	}
+
+	pushTask(e)
+
+	log.Printf("ExampleTask added to queue")
+	return
+}
+
+func (e ExampleTask) Provision() (string, bool) {
+	// This task will run locally
+	return "local", true
+}
+
+func (e ExampleTask) Do(host string) error {
 	body := `This is an example task created by GOZBOT. See 'tasks/example.go' in the source for more details
 When the 'random-exit-code' task has run, we will see the output here:`
 	checkRun, err := gh.UpdateCheckRun(e.CheckRun, exampleSummaryInProgress, body)
@@ -52,7 +90,7 @@ When the 'random-exit-code' task has run, we will see the output here:`
 func (e *ExampleTask) exampleWork() (output string, ok bool) {
 	ok = true
 
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second * 30)
 	cmd := exec.Command("./random-exit-code")
 
 	out, err := cmd.CombinedOutput()
@@ -67,34 +105,5 @@ func (e *ExampleTask) exampleWork() (output string, ok bool) {
 		ok = false
 	}
 
-	return
-}
-
-func PushExampleTask(SHA, SubmittedBy string) (ok bool, err error) {
-	ok = false
-
-	// See if any exampleTasks for this SHA are already queued
-	for _, t := range task_queue {
-		if e, ok := t.(ExampleTask); ok && e.SHA == SHA {
-			return false, nil
-		}
-	}
-
-	msg := "This commit has been added to the task queue. More information will appear here once the task has started"
-	checkRun, err := gh.CreateCheckRun(SHA, exampleTitle, exampleSummaryInQueue, msg)
-	if err != nil {
-		return
-	}
-
-	Push(ExampleTask{
-		SHA:         SHA,
-		SubmittedBy: SubmittedBy,
-		CheckRun:    checkRun,
-	})
-	if err != nil {
-		return
-	}
-
-	ok = true
 	return
 }

@@ -41,20 +41,12 @@ func triggerNewBuild(event *github.PushEvent, pr *github.PullRequest) error {
 	)
 
 	//TODO: Redundant code here and in pull_request.go?
-	ok, err := tasks.PushBuild(
-		pr.GetNumber(),
-		headCommit.GetSHA(),
-		headCommit.GetAuthor().GetLogin(),
-	)
-	if err != nil {
-		return err
-	}
-
-	if ok {
-		log.Println("Added to build queue")
-	} else {
-		log.Println("Not added to build queue")
-	}
+	tasks.Build{
+		PR:          pr.GetNumber(),
+		Branch:      pr.GetHead().GetRef(),
+		SHA:         headCommit.GetSHA(),
+		SubmittedBy: headCommit.GetAuthor().GetLogin(),
+	}.Enqueue()
 
 	return nil
 }

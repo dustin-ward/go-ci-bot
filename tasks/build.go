@@ -21,12 +21,9 @@ type Build struct {
 	SHA         string
 	SubmittedBy string
 
-	CheckRun *github.CheckRun
+	BuildMachine string
+	CheckRun     *github.CheckRun
 }
-
-const (
-	connString = "zosgo@zoscan56.pok.stglabs.ibm.com"
-)
 
 var (
 	buildTitle             = "z/OS Build & Test"
@@ -35,31 +32,81 @@ var (
 	buildSummaryCompleted  = "Completed"
 )
 
-var (
-	GithubUpdateInterval = time.Second * 30
-)
+func (b Build) Enqueue() {
+	// Make sure PR is mergeable first. Otherwise send a comment
+	pr, err := gh.GetPullRequest(b.PR)
+	if err != nil {
+		log.Printf("Build not queued: %v\n", err)
+		return
+	}
+	if !pr.GetMergeable() {
+		msg := "⚠️ PR is not mergeable. Please resolve conflicts"
+		_, err = gh.CreateComment(pr.GetNumber(), msg)
+		log.Printf("Build not queued: PR not mergeable %v\n", err)
+		return
+	}
 
-func (b Build) Do() error {
-	log.Printf("Doing build #%d/%s (%s) - %s\n", b.PR, b.Branch, b.SHA[:6], b.SubmittedBy)
+	// See if any workers are already doing this task
+	for _, worker := range workerPool {
+		if worker.CurTask != nil {
+			if e, ok := (*worker.CurTask).(Build); ok && e.SHA == b.SHA {
+				log.Printf("Build not queued: A worker is already proccessing this task\n")
+				return
+			}
+		}
+	}
 
-	buildMachine := "zoscan56"
+	// See if any builds for this SHA are already queued
+	for _, t := range task_queue {
+		if build, ok := t.(Build); ok && build.SHA == b.SHA {
+			log.Printf("Build not queued: This task is already in the queue\n")
+			return
+		}
+	}
 
-	body := "The build is now in progress. Machine: " + buildMachine
+	// If this is a new task in the queue, create the initial github check status object
+	if b.CheckRun == nil {
+		msg := "This commit has been added to the build queue. More information will appear here once the build has started"
+		b.CheckRun, err = gh.CreateCheckRun(b.SHA, buildTitle, buildSummaryInQueue, msg)
+		if err != nil {
+			log.Printf("Build not queued: error creating check run: %v\n", err)
+			return
+		}
+	}
+
+	pushTask(b)
+
+	log.Printf("Build added to queue")
+	return
+}
+
+func (b Build) Provision() (string, bool) {
+	return getZosMachine()
+}
+
+func (b Build) Do(host string) error {
+	buildStr := fmt.Sprintf("%s/%s [#%d] (%s) - %s", config.Repo(), b.Branch, b.PR, b.SHA[:6], b.SubmittedBy)
+	log.Printf("Starting build %s\n", buildStr)
+
+	// Update the github status to show "In-Progress"
+	body := "The build is now in progress. Machine: " + host
 	var err error
 	b.CheckRun, err = gh.UpdateCheckRun(b.CheckRun, buildSummaryInProgress, body)
 	if err != nil {
 		return fmt.Errorf("Error Starting Build: %v", err)
 	}
 
-	output, ok := b.build()
+	// Do the SSH portion of the task
+	output, ok := b.build(host)
 	var conclusion string
 	if ok {
 		conclusion = gh.CHECK_CONCLUSION_SUCCESS
 	} else {
 		conclusion = gh.CHECK_CONCLUSION_FAILURE
 	}
-	log.Printf("Build Completed [%s] #%d/%s (%s) - %s\n", conclusion, b.PR, b.Branch, b.SHA[:6], b.SubmittedBy)
+	log.Printf("Build Completed <%s> %s\n", conclusion, buildStr)
 
+	// Update the github status to show "Completed" (PASS/FAIL)
 	body = fmt.Sprintf("The build has completed. Output:\n```\n%s\n```", output)
 	b.CheckRun, err = gh.CompleteCheckRun(b.CheckRun, conclusion, buildSummaryCompleted, body)
 	if err != nil {
@@ -69,18 +116,30 @@ func (b Build) Do() error {
 	return nil
 }
 
-func (b *Build) build() (output string, ok bool) {
+var (
+	GithubUpdateInterval = time.Second * 30
+)
+
+func (b *Build) build(host string) (output string, ok bool) {
 	var outputMu sync.Mutex
 	ok = true
+
+	// This is the script that will be executed on z/OS.
+	// We need to make sure that the machines are actually setup to invoke this script.
+	// Need:
+	//   ~/gozbot-build-test.sh
+	//   ~/gozbot/
 	cmd := exec.Command(
 		"ssh",
-		connString,
+		fmt.Sprintf("zosgo@%s", host),
 		fmt.Sprintf("~/gozbot-build-test.sh %s/%s %s",
 			config.Owner(),
 			config.Repo(),
 			b.Branch,
 		),
 	)
+
+	// Combine stdout and stderr so we can read from the combined pipe dynamically
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
 	multi := io.MultiReader(stdout, stderr)
@@ -115,7 +174,7 @@ func (b *Build) build() (output string, ok bool) {
 		}
 	}()
 
-	// Read from stdout+stderr
+	// Read from the combined pipe. It will return EOF when the cmd finishes, so we can block here
 	scanner := bufio.NewScanner(multi)
 	for scanner.Scan() {
 		txt := scanner.Text()
@@ -133,6 +192,7 @@ func (b *Build) build() (output string, ok bool) {
 		log.Println(err)
 	}
 
+	// The command has finished. Now cleanup
 	err = cmd.Wait()
 	cancelUpdates()
 	if err != nil {
@@ -145,47 +205,5 @@ func (b *Build) build() (output string, ok bool) {
 		ok = false
 	}
 
-	return
-}
-
-func PushBuild(PR int, SHA, SubmittedBy string) (ok bool, err error) {
-	ok = false
-
-	// Make sure PR is mergeable first
-	pr, err := gh.GetPullRequest(PR)
-	if err != nil {
-		return
-	}
-	if !pr.GetMergeable() {
-		msg := "⚠️ PR is not mergeable. Please resolve conflicts"
-		_, err = gh.CreateComment(pr.GetNumber(), msg)
-		return
-	}
-
-	// See if any builds for this SHA are already queued
-	for _, t := range task_queue {
-		if build, ok := t.(Build); ok && build.SHA == SHA {
-			return false, nil
-		}
-	}
-
-	msg := "This commit has been added to the build queue. More information will appear here once the build has started"
-	checkRun, err := gh.CreateCheckRun(SHA, buildTitle, buildSummaryInQueue, msg)
-	if err != nil {
-		return
-	}
-
-	Push(Build{
-		PR:          PR,
-		Branch:      pr.GetHead().GetRef(),
-		SHA:         SHA,
-		SubmittedBy: SubmittedBy,
-		CheckRun:    checkRun,
-	})
-	if err != nil {
-		return
-	}
-
-	ok = true
 	return
 }

@@ -25,20 +25,13 @@ func registerNewPR(event *github.PullRequestEvent) error {
 		pr.GetHead().GetSHA()[:6],
 	)
 
-	ok, err := tasks.PushBuild(
-		pr.GetNumber(),
-		pr.GetHead().GetSHA(),
-		pr.GetHead().GetUser().GetLogin(),
-	)
-	if err != nil {
-		return err
-	}
-
-	if ok {
-		log.Println("Added to build queue")
-	} else {
-		log.Println("Not added to build queue")
-	}
+	//TODO: Redundant code here and in pull_request.go?
+	tasks.Build{
+		PR:          pr.GetNumber(),
+		Branch:      pr.GetHead().GetRef(),
+		SHA:         pr.GetHead().GetSHA(),
+		SubmittedBy: pr.GetHead().GetUser().GetLogin(),
+	}.Enqueue()
 
 	return nil
 }

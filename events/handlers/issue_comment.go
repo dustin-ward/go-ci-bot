@@ -42,20 +42,13 @@ func respinBuild(event *github.IssueCommentEvent) error {
 		event.GetComment().GetUser().GetLogin(),
 	)
 
-	ok, err := tasks.PushBuild(
-		pr.GetNumber(),
-		pr.GetHead().GetSHA(),
-		event.GetComment().GetUser().GetLogin(),
-	)
-	if err != nil {
-		return err
-	}
-
-	if ok {
-		log.Println("Added to task queue")
-	} else {
-		log.Println("Not added to task queue")
-	}
+	//TODO: Redundant code here and in pull_request.go?
+	tasks.Build{
+		PR:          pr.GetNumber(),
+		Branch:      pr.GetHead().GetRef(),
+		SHA:         pr.GetHead().GetSHA(),
+		SubmittedBy: event.GetComment().GetUser().GetLogin(),
+	}.Enqueue()
 
 	return nil
 }
@@ -73,19 +66,10 @@ func startExampleTask(event *github.IssueCommentEvent) error {
 		event.GetComment().GetUser().GetLogin(),
 	)
 
-	ok, err := tasks.PushExampleTask(
-		pr.GetHead().GetSHA(),
-		event.GetComment().GetUser().GetLogin(),
-	)
-	if err != nil {
-		return err
-	}
-
-	if ok {
-		log.Println("Added to task queue")
-	} else {
-		log.Println("Not added to task queue")
-	}
+	tasks.ExampleTask{
+		SHA:         pr.GetHead().GetSHA(),
+		SubmittedBy: event.GetComment().GetUser().GetLogin(),
+	}.Enqueue()
 
 	return nil
 }

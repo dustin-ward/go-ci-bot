@@ -10,7 +10,8 @@ import (
 )
 
 var (
-	reSpinBuild = regexp.MustCompile("(?i)re[- ]*(spin|test|build|try)")
+	//TODO: Make a more modular system to allow for renaming the bot
+	reSpinBuild = regexp.MustCompile("(?i)@gozbot re[- ]*(spin|test|build|try)")
 	exampleTask = regexp.MustCompile("(?i)@gozbot example")
 )
 

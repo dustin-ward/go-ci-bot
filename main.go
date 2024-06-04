@@ -27,8 +27,8 @@ func main() {
 		"open-z",
 		"go",
 		"./jeffci.private-key.pem",
-		2697,
-		24592,
+		2697,     // AppId
+		24592,    // InstallationId
 	)
 
 	// Cancel any checks that were previously queued

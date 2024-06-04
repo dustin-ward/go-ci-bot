@@ -26,7 +26,7 @@ func main() {
 		"https://github.ibm.com",
 		"open-z",
 		"go",
-		"./private-key.pem",
+		"./jeffci.private-key.pem",
 		2697,
 		24592,
 	)

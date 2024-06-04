@@ -38,12 +38,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Println("GOZBOT has started")
-
 	// Wait for interrupt to end program
 	stopMain := make(chan os.Signal, 1)
 	signal.Notify(stopMain, os.Interrupt)
-	log.Println("Press Ctrl+C to exit")
 
 	// Goroutine communication
 	var wg sync.WaitGroup
@@ -80,22 +77,25 @@ func main() {
 		defer wg.Done()
 		ticker := time.NewTicker(EventPollInterval)
 		lastPollTime := time.Now() // Starting time
+		log.Println("Polling for events...")
 
 		for {
-			// Events poll returns time right after poll was completed
-			lastPollTime = events.Poll(lastPollTime)
-
 			// Wait for next poll or end.
-			// Do this after so that the first poll happens right on init instead of 60 seconds after
 			select {
 			case <-ticker.C:
-				continue
+				// Do the poll
 			case <-ctx.Done():
 				// End Program
 				return
 			}
+
+			// Events poll returns time right after poll was completed
+			lastPollTime = events.Poll(lastPollTime, time.Now())
 		}
 	}()
+
+	log.Println("GOZBOT has started")
+	log.Println("Press Ctrl+C to exit")
 
 	//TODO:Perform any takedown operations needed
 	<-stopMain

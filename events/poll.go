@@ -7,9 +7,8 @@ import (
 	"time"
 )
 
-func Poll(earliestTime time.Time) time.Time {
+func Poll(earliestTime, now time.Time) time.Time {
 	events, err := gh.GetRepositoryEvents()
-	pollTime := time.Now()
 	if err != nil {
 		log.Fatal("ListRepositoryEvents: ", err)
 	}
@@ -24,7 +23,6 @@ func Poll(earliestTime time.Time) time.Time {
 			// Dont consider any events older than the last poll
 			break
 		}
-		log.Println("Found event")
 
 		err = handlers.Handle(e)
 		if err != nil {
@@ -32,5 +30,5 @@ func Poll(earliestTime time.Time) time.Time {
 		}
 	}
 
-	return pollTime
+	return now
 }

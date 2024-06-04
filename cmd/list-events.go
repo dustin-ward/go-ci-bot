@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -9,6 +10,9 @@ import (
 )
 
 func main() {
+	n := flag.Int("n", 5, "Get last `n` events")
+	flag.Parse()
+
 	config.NewConfig(
 		"https://github.ibm.com",
 		"test-org-gozbot",
@@ -27,7 +31,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	for _, e := range events {
+	for _, e := range events[:*n] {
 		fmt.Printf("Event: %s (%s)\n", e.GetType(), e.GetID())
 		fmt.Println("  at:", e.GetCreatedAt())
 		fmt.Println("  in:", e.GetRepo().GetName())

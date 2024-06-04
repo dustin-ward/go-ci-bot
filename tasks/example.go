@@ -2,9 +2,9 @@ package tasks
 
 import (
 	"fmt"
+	"github.ibm.com/open-z/jeff-ci/gh"
 	"log"
 	"os/exec"
-	"test-org-gozbot/gh"
 	"time"
 
 	"github.com/google/go-github/v62/github"

@@ -1,8 +1,8 @@
 package handlers
 
 import (
+	"github.ibm.com/open-z/jeff-ci/tasks"
 	"log"
-	"test-org-gozbot/tasks"
 
 	"github.com/google/go-github/v62/github"
 )

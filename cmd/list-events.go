@@ -3,10 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.ibm.com/open-z/jeff-ci/config"
+	"github.ibm.com/open-z/jeff-ci/gh"
 	"log"
 	"os"
-	"test-org-gozbot/config"
-	"test-org-gozbot/gh"
 )
 
 func main() {
@@ -15,10 +15,10 @@ func main() {
 
 	config.NewConfig(
 		"https://github.ibm.com",
-		"test-org-gozbot",
+		"open-z",
 		"go",
 		"./private-key.pem",
-		2206,
+		2697,
 		19342,
 	)
 

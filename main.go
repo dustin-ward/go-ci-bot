@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
+	"github.ibm.com/open-z/jeff-ci/config"
+	"github.ibm.com/open-z/jeff-ci/events"
+	"github.ibm.com/open-z/jeff-ci/tasks"
 	"log"
 	"os"
 	"os/signal"
 	"sync"
-	"test-org-gozbot/config"
-	"test-org-gozbot/events"
-	"test-org-gozbot/tasks"
 	"time"
 )
 
@@ -24,10 +24,10 @@ const (
 func main() {
 	config.NewConfig(
 		"https://github.ibm.com",
-		"test-org-gozbot",
+		"open-z",
 		"go",
 		"./private-key.pem",
-		2206,
+		2697,
 		19342,
 	)
 

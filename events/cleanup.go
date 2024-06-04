@@ -1,8 +1,8 @@
 package events
 
 import (
+	"github.ibm.com/open-z/jeff-ci/gh"
 	"log"
-	"test-org-gozbot/gh"
 )
 
 func Cleanup() error {

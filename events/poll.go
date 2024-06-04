@@ -1,9 +1,9 @@
 package events
 
 import (
+	"github.ibm.com/open-z/jeff-ci/events/handlers"
+	"github.ibm.com/open-z/jeff-ci/gh"
 	"log"
-	"test-org-gozbot/events/handlers"
-	"test-org-gozbot/gh"
 	"time"
 )
 

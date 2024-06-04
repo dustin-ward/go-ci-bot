@@ -2,8 +2,8 @@ package gh
 
 import (
 	"context"
-	"test-org-gozbot/config"
-	"test-org-gozbot/gh/auth"
+	"github.ibm.com/open-z/jeff-ci/config"
+	"github.ibm.com/open-z/jeff-ci/gh/auth"
 	"time"
 
 	"github.com/google/go-github/v62/github"

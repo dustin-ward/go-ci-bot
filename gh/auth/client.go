@@ -2,9 +2,9 @@ package auth
 
 import (
 	"context"
+	"github.ibm.com/open-z/jeff-ci/config"
 	"log"
 	"net/http"
-	"test-org-gozbot/config"
 	"time"
 
 	"github.com/bradleyfalzon/ghinstallation/v2"

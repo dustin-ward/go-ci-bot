@@ -1,4 +1,4 @@
-module test-org-gozbot
+module github.ibm.com/open-z/jeff-ci
 
 go 1.21.0
 

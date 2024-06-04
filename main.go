@@ -28,7 +28,7 @@ func main() {
 		"go",
 		"./private-key.pem",
 		2697,
-		19342,
+		24592,
 	)
 
 	// Cancel any checks that were previously queued

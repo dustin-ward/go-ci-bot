@@ -11,8 +11,8 @@ import (
 
 var (
 	//TODO: Make a more modular system to allow for renaming the bot
-	reSpinBuild = regexp.MustCompile("(?i)@gozbot re[- ]*(spin|test|build|try)")
-	exampleTask = regexp.MustCompile("(?i)@gozbot example")
+	reSpinBuild = regexp.MustCompile("(?i)@jeffci re[- ]*(spin|test|build|try)")
+	exampleTask = regexp.MustCompile("(?i)@jeffci example")
 )
 
 func handleIssueCommentEvent(event *github.IssueCommentEvent) error {

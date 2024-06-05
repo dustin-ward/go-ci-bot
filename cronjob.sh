@@ -2,10 +2,10 @@
 
 # Check to see if the bot is already running
 declare -a aa
-me=$(/bin/basename $0)
+me="jeff-ci"
 while read line; do
         aa=($line)
-        cmd=$(/bin/basename ${aa[3]})
+        cmd=$(/bin/basename ${aa[2]})
         if [[ ${cmd} == ${me} ]]; then
                 if [[ ${aa[0]} != $$ ]]; then
                         if [[ ${aa[1]} != $$ ]]; then

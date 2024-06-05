@@ -17,10 +17,10 @@ type ExampleTask struct {
 }
 
 var (
-	exampleTitle             = "Example Task"
-	exampleSummaryInQueue    = "Example - In Queue"
-	exampleSummaryInProgress = "Example - In Progress"
-	exampleSummaryCompleted  = "Example - Completed"
+	exampleTitle             = "JeffCI - Example Task ❔"
+	exampleSummaryInQueue    = "Example - In Queue... ⏳"
+	exampleSummaryInProgress = "Example - In Progress... ⚙️"
+	exampleSummaryCompleted  = "Example - Completed 🏁"
 )
 
 func (e ExampleTask) Enqueue() {
@@ -62,7 +62,7 @@ func (e ExampleTask) Provision() (string, bool) {
 }
 
 func (e ExampleTask) Do(host string) error {
-	body := `This is an example task created by GOZBOT. See 'tasks/example.go' in the source for more details
+	body := `This is an example task created by JeffCI. See 'tasks/example.go' in the source for more details
 When the 'random-exit-code' task has run, we will see the output here:`
 	checkRun, err := gh.UpdateCheckRun(e.CheckRun, exampleSummaryInProgress, body)
 	if err != nil {

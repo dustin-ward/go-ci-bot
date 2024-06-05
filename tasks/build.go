@@ -26,10 +26,10 @@ type Build struct {
 }
 
 var (
-	buildTitle             = "z/OS Build & Test"
-	buildSummaryInQueue    = "In Queue..."
-	buildSummaryInProgress = "In Progress..."
-	buildSummaryCompleted  = "Completed"
+	buildTitle             = "JeffCI - z/OS Build & Test 🛠️"
+	buildSummaryInQueue    = "Build - In Queue... ⏳"
+	buildSummaryInProgress = "In Progress... ⚙️"
+	buildSummaryCompleted  = "Completed 🏁"
 )
 
 func (b Build) Enqueue() {

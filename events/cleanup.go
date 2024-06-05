@@ -23,7 +23,7 @@ func Cleanup() error {
 			}
 
 			summary := "Check Run Cancelled"
-			msg := "Stale Check Run - GOZBOT has been terminated since this run has been queued"
+			msg := "Stale Check Run - JeffCI has been terminated since this run has been queued"
 			_, err := gh.CompleteCheckRun(checkRun, gh.CHECK_CONCLUSION_CANCELLED, summary, msg)
 			if err != nil {
 				return err

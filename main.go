@@ -95,7 +95,7 @@ func main() {
 		}
 	}()
 
-	log.Println("GOZBOT has started")
+	log.Println("JeffCI has started")
 	log.Println("Press Ctrl+C to exit")
 
 	//TODO:Perform any takedown operations needed

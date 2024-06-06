@@ -1,10 +1,11 @@
 package handlers
 
 import (
-	"github.ibm.com/open-z/jeff-ci/gh"
-	"github.ibm.com/open-z/jeff-ci/tasks"
 	"log"
 	"regexp"
+
+	"github.ibm.com/open-z/jeff-ci/gh"
+	"github.ibm.com/open-z/jeff-ci/tasks"
 
 	"github.com/google/go-github/v62/github"
 )
@@ -45,8 +46,9 @@ func respinBuild(event *github.IssueCommentEvent) error {
 	//TODO: Redundant code here and in pull_request.go?
 	tasks.Build{
 		PR:          pr.GetNumber(),
-		Branch:      pr.GetHead().GetRef(),
 		SHA:         pr.GetHead().GetSHA(),
+		BaseBranch:  pr.GetBase().GetRef(),
+		HeadBranch:  pr.GetHead().GetRef(),
 		SubmittedBy: event.GetComment().GetUser().GetLogin(),
 	}.Enqueue()
 

@@ -2,9 +2,10 @@ package handlers
 
 import (
 	"fmt"
+	"log"
+
 	"github.ibm.com/open-z/jeff-ci/gh"
 	"github.ibm.com/open-z/jeff-ci/tasks"
-	"log"
 
 	"github.com/google/go-github/v62/github"
 )
@@ -43,8 +44,9 @@ func triggerNewBuild(event *github.PushEvent, pr *github.PullRequest) error {
 	//TODO: Redundant code here and in pull_request.go?
 	tasks.Build{
 		PR:          pr.GetNumber(),
-		Branch:      pr.GetHead().GetRef(),
 		SHA:         headCommit.GetSHA(),
+		BaseBranch:  pr.GetBase().GetRef(),
+		HeadBranch:  pr.GetHead().GetRef(),
 		SubmittedBy: headCommit.GetAuthor().GetLogin(),
 	}.Enqueue()
 

@@ -4,21 +4,22 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"github.ibm.com/open-z/jeff-ci/config"
-	"github.ibm.com/open-z/jeff-ci/gh"
 	"io"
 	"log"
 	"os/exec"
 	"sync"
 	"time"
 
+	"github.ibm.com/open-z/jeff-ci/gh"
+
 	"github.com/google/go-github/v62/github"
 )
 
 type Build struct {
 	PR          int
-	Branch      string
 	SHA         string
+	BaseBranch  string
+	HeadBranch  string
 	SubmittedBy string
 
 	BuildMachine string
@@ -33,40 +34,46 @@ var (
 )
 
 func (b Build) Enqueue() {
-	// Make sure PR is mergeable first. Otherwise send a comment
-	pr, err := gh.GetPullRequest(b.PR)
-	if err != nil {
-		log.Printf("Build not queued: %v\n", err)
-		return
-	}
-	if !pr.GetMergeable() {
-		msg := "⚠️ PR is not mergeable. Please resolve conflicts"
-		_, err = gh.CreateComment(pr.GetNumber(), msg)
-		log.Printf("Build not queued: PR not mergeable %v\n", err)
-		return
-	}
+	log.Printf("BuildEnqueue: {%d %s %s <- %s %s %s}\n", b.PR, b.SHA[:6], b.BaseBranch, b.HeadBranch, b.SubmittedBy, b.BuildMachine)
+	if b.HeadBranch != b.BaseBranch {
+		// Make sure PR is mergeable first. Otherwise send a comment
+		pr, err := gh.GetPullRequest(b.PR)
+		if err != nil {
+			log.Printf("Build not queued: %v\n", err)
+			return
+		}
+		log.Println("Mergeable:", pr.GetMergeable())
+		log.Println("MergeableState:", pr.GetMergeableState())
+		if !pr.GetMergeable() {
+			msg := "⚠️ PR is not mergeable. Please resolve conflicts"
+			_, err = gh.CreateComment(pr.GetNumber(), msg)
+			log.Printf("Build not queued: PR not mergeable %v\n", err)
+			return
+		}
 
-	// See if any workers are already doing this task
-	for _, worker := range workerPool {
-		if worker.CurTask != nil {
-			if e, ok := (*worker.CurTask).(Build); ok && e.SHA == b.SHA {
-				log.Printf("Build not queued: A worker is already proccessing this task\n")
-				return
+		// See if any workers are already doing this task
+		for _, worker := range workerPool {
+			if worker.CurTask != nil {
+				if e, ok := (*worker.CurTask).(Build); ok && e.SHA == b.SHA {
+					log.Printf("Build not queued: A worker is already proccessing this task\n")
+					return
+				}
 			}
 		}
-	}
 
-	// See if any builds for this SHA are already queued
-	for _, t := range task_queue {
-		if build, ok := t.(Build); ok && build.SHA == b.SHA {
-			log.Printf("Build not queued: This task is already in the queue\n")
-			return
+		// See if any builds for this SHA are already queued
+		for _, t := range task_queue {
+			if build, ok := t.(Build); ok && build.SHA == b.SHA {
+				log.Printf("Build not queued: This task is already in the queue\n")
+				return
+			}
 		}
 	}
 
 	// If this is a new task in the queue, create the initial github check status object
 	if b.CheckRun == nil {
 		msg := "This commit has been added to the build queue. More information will appear here once the build has started"
+		var err error
 		b.CheckRun, err = gh.CreateCheckRun(b.SHA, buildTitle, buildSummaryInQueue, msg)
 		if err != nil {
 			log.Printf("Build not queued: error creating check run: %v\n", err)
@@ -85,7 +92,7 @@ func (b Build) Provision() (string, bool) {
 }
 
 func (b Build) Do(host string) error {
-	buildStr := fmt.Sprintf("%s/%s [#%d] (%s) - %s", config.Repo(), b.Branch, b.PR, b.SHA[:6], b.SubmittedBy)
+	buildStr := fmt.Sprintf("%s <- %s [#%d] (%s) - %s", b.BaseBranch, b.HeadBranch, b.PR, b.SHA[:6], b.SubmittedBy)
 	log.Printf("Starting build %s\n", buildStr)
 
 	// Update the github status to show "In-Progress"
@@ -132,10 +139,9 @@ func (b *Build) build(host string) (output string, ok bool) {
 	cmd := exec.Command(
 		"ssh",
 		fmt.Sprintf("zosgo@%s", host),
-		fmt.Sprintf("~/gozbot-build-test.sh %s/%s %s",
-			config.Owner(),
-			config.Repo(),
-			b.Branch,
+		fmt.Sprintf("~/gozbot-build-test.sh %s %s",
+			b.HeadBranch,
+			b.BaseBranch,
 		),
 	)
 

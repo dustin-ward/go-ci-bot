@@ -19,7 +19,7 @@ const (
 )
 
 const (
-	NumWorkers = 2
+	NumWorkers = 3
 )
 
 func main() {

@@ -1,25 +1,37 @@
 package events
 
 import (
+	"log"
+
 	"github.ibm.com/open-z/jeff-ci/events/handlers"
 	"github.ibm.com/open-z/jeff-ci/gh"
-	"log"
-	"time"
 )
 
-func Poll(earliestTime, now time.Time) time.Time {
+func GetMostRecentEventID() (id string) {
+	events, err := gh.GetRepositoryEvents()
+	if err != nil {
+		log.Fatal("GetMostRecentEventID: ", err)
+	}
+
+	if len(events) != 0 {
+		id = events[0].GetID()
+	}
+
+	return
+}
+
+func Poll(lastEventID string) (newestEventID string) {
 	events, err := gh.GetRepositoryEvents()
 	if err != nil {
 		log.Fatal("ListRepositoryEvents: ", err)
 	}
 
 	for _, e := range events {
-		createdAt := e.GetCreatedAt()
-		if createdAt.IsZero() {
-			// Skip events with no timestamp (?)
-			continue
+		if newestEventID == "" {
+			newestEventID = e.GetID()
 		}
-		if createdAt.Before(earliestTime) {
+
+		if e.GetID() == lastEventID {
 			// Dont consider any events older than the last poll
 			break
 		}
@@ -30,5 +42,5 @@ func Poll(earliestTime, now time.Time) time.Time {
 		}
 	}
 
-	return now
+	return
 }

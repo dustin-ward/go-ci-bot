@@ -2,14 +2,15 @@ package main
 
 import (
 	"context"
-	"github.ibm.com/open-z/jeff-ci/config"
-	"github.ibm.com/open-z/jeff-ci/events"
-	"github.ibm.com/open-z/jeff-ci/tasks"
 	"log"
 	"os"
 	"os/signal"
 	"sync"
 	"time"
+
+	"github.ibm.com/open-z/jeff-ci/config"
+	"github.ibm.com/open-z/jeff-ci/events"
+	"github.ibm.com/open-z/jeff-ci/tasks"
 )
 
 const (
@@ -27,8 +28,8 @@ func main() {
 		"open-z",
 		"go",
 		"./jeffci.private-key.pem",
-		2697,     // AppId
-		24592,    // InstallationId
+		2697,  // AppId
+		24592, // InstallationId
 	)
 
 	// Cancel any checks that were previously queued
@@ -76,10 +77,13 @@ func main() {
 	go func() {
 		defer wg.Done()
 		ticker := time.NewTicker(EventPollInterval)
-		lastPollTime := time.Now() // Starting time
+		lastEventID := events.GetMostRecentEventID()
 		log.Println("Polling for events...")
 
 		for {
+			// Events poll returns the ID of the last event that was handled
+			lastEventID = events.Poll(lastEventID)
+
 			// Wait for next poll or end.
 			select {
 			case <-ticker.C:
@@ -88,9 +92,6 @@ func main() {
 				// End Program
 				return
 			}
-
-			// Events poll returns time right after poll was completed
-			lastPollTime = events.Poll(lastPollTime, time.Now())
 		}
 	}()
 

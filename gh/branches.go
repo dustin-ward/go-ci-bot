@@ -23,3 +23,20 @@ func GetBranches() ([]*github.Branch, error) {
 
 	return branches, err
 }
+
+func GetBranch(branchName string) (*github.Branch, error) {
+	client, err := auth.GetClient()
+	if err != nil {
+		return nil, err
+	}
+
+	branch, _, err := client.Repositories.GetBranch(
+		context.TODO(),
+		config.Owner(),
+		config.Repo(),
+		branchName,
+		0,
+	)
+
+	return branch, err
+}

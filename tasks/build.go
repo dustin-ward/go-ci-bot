@@ -34,8 +34,12 @@ var (
 )
 
 func (b Build) Enqueue() {
-	log.Printf("BuildEnqueue: {%d %s %s <- %s %s %s}\n", b.PR, b.SHA[:6], b.BaseBranch, b.HeadBranch, b.SubmittedBy, b.BuildMachine)
 	if b.HeadBranch != b.BaseBranch {
+		// Sometimes the 'mergeable' status hasnt been determined yet...
+		// It would probably be better to loop while pr.GetMergeableStatus() == 'unknown'
+		// but this will do for now
+		time.Sleep(2 * time.Second)
+
 		// Make sure PR is mergeable first. Otherwise send a comment
 		pr, err := gh.GetPullRequest(b.PR)
 		if err != nil {

@@ -4,6 +4,7 @@ import (
 	"log"
 	"regexp"
 
+	"github.ibm.com/open-z/jeff-ci/gh"
 	"github.ibm.com/open-z/jeff-ci/tasks"
 
 	"github.com/google/go-github/v62/github"
@@ -54,12 +55,17 @@ func triggerPackageRelease(event *github.PullRequestEvent) error {
 	re := regexp.MustCompile(`^release-branch\.go\d+\.\d+-zos$`)
 	baseRefName := pr.GetBase().GetRef()
 	if re.MatchString(baseRefName) {
+		releaseBranch, err := gh.GetBranch(baseRefName)
+		if err != nil {
+			return err
+		}
+
 		// Create build with base == head == release-branch.go1.xx.x-zos
 		tasks.Build{
 			PR:          pr.GetNumber(),
-			SHA:         pr.GetBase().GetSHA(),
-			BaseBranch:  pr.GetBase().GetRef(),
-			HeadBranch:  pr.GetBase().GetRef(),
+			SHA:         releaseBranch.GetCommit().GetSHA(),
+			BaseBranch:  baseRefName,
+			HeadBranch:  baseRefName,
 			SubmittedBy: pr.GetMergedBy().GetLogin(),
 		}.Enqueue()
 	}

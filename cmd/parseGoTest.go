@@ -1,10 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -174,17 +174,18 @@ func (pr *PackageResult) String() string {
 }
 
 func parseGoTestJson(text string) (*TestSummary, error) {
-	jsonDecoder := json.NewDecoder(strings.NewReader(text))
 	summary := new(TestSummary)
 	summary.PackageResults = make(map[string]*PackageResult)
+	scanner := bufio.NewScanner(strings.NewReader(text))
+	var errs []error
 
-	for {
+	for scanner.Scan() {
 		var data JsonData = JsonData{}
-		if err := jsonDecoder.Decode(&data); err == io.EOF {
-			break
-		} else if err != nil {
-			fmt.Errorf("parsing error: %s", err.Error())
-			return nil, err
+		line := scanner.Text()
+		if err := json.Unmarshal([]byte(line), &data); err != nil {
+			parseErr := fmt.Errorf("parsing error: %s in line: %s\n", err.Error(), line)
+			errs = append(errs, parseErr)
+			continue
 		}
 
 		pkgName := data.Package
@@ -234,6 +235,14 @@ func parseGoTestJson(text string) (*TestSummary, error) {
 			}
 
 		}
+	}
+
+	if len(errs) > 0 {
+		var str string
+		for _, err := range errs {
+			str += err.Error() + "\n"
+		}
+		return summary, fmt.Errorf("%s", str)
 	}
 
 	return summary, nil
@@ -304,10 +313,9 @@ func main() {
 
 	testoutput := readInput(args)
 
-	goTestSummary, err := parseGoTestJson(testoutput)
-	if err != nil {
-		println("Cannot parse json data: ", err.Error())
-		return
+	goTestSummary, parseError := parseGoTestJson(testoutput)
+	if parseError != nil {
+		println("Cannot parse json data: \n", parseError.Error())
 	}
 
 	fmt.Println("Test Summary")

@@ -285,6 +285,10 @@ func readInput(args []string) string {
 				if fileEntry.IsDir() {
 					continue
 				}
+				if !(strings.HasSuffix(filePath, ".testout") || strings.HasSuffix(filePath, ".tmp")) {
+					continue
+				}
+
 				sb.WriteString(readFile(filePath))
 			}
 		} else { // file is not a directory

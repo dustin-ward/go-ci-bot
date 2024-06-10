@@ -271,8 +271,13 @@ func readInput(args []string) string {
 		panic(err)
 	}
 	var sb strings.Builder
+	var targetPath string
 	for _, arg := range args {
-		targetPath := filepath.Join(currentPath, arg)
+		if filepath.IsAbs(arg) {
+			targetPath = arg 
+		} else {
+			targetPath = filepath.Join(currentPath, arg)
+		}
 
 		if isDir(targetPath) {
 			files, err := os.ReadDir(targetPath)

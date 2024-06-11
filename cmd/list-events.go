@@ -14,12 +14,6 @@ func main() {
 	flag.Parse()
 
 	config.NewConfig(
-		"https://github.ibm.com",
-		"open-z",
-		"go",
-		"./jeffci.private-key.pem",
-		2697,
-		24592,
 	)
 
 	events, err := gh.GetRepositoryEvents()

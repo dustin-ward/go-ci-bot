@@ -14,8 +14,6 @@ const (
 
 var (
 	zosMachines = []string{
-		"zoscan59.pok.stglabs.ibm.com",
-		"zoscan56.pok.stglabs.ibm.com",
 	}
 )
 
@@ -45,7 +43,7 @@ func getZosMachine() (string, bool) {
 	return "", false
 }
 
-// Lifted from 'merge-n-test.go` in 'go-build-zos-automation' @ccw
+// Lifted from 'merge-n-test.go` in 'go-build-zos-automation'
 func sshAvailable(host string) (bool, error) {
 	port := "22"
 	timeout := time.Second

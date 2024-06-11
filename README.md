@@ -25,8 +25,6 @@ This can be used to test that the bot is working. It should also be used as a re
 
 2. Add `cronjob.sh` to the host machines crontab. This script just checks to see if the bot is already running. If it isn't it pulls any new changes from the repo, re-builds the bot, and starts a new session.
 
-> [!NOTE] The bot currently runs on `zosgo@csz25086.pok.stglabs.ibm.com` (linux)
-
 3. Ensure that `gozbot-build-test.sh` exists on the build machines (zoscan59, zoscan56) in the `/home/zosgo` directory and is executable (`chmod +x gozbot-build-test.sh)
 
 > [!NOTE] For now, zoscan56 is disabled. We can change the available build machines in `tasks/machine.go`

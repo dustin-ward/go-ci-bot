@@ -14,7 +14,7 @@ const (
 
 var (
 	zosMachines = []string{
-        "zoscan59.pok.stglabs.ibm.com",
+		"zoscan59.pok.stglabs.ibm.com",
 		"zoscan56.pok.stglabs.ibm.com",
 	}
 )

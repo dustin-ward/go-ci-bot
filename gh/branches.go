@@ -2,6 +2,7 @@ package gh
 
 import (
 	"context"
+
 	"github.ibm.com/open-z/jeff-ci/config"
 	"github.ibm.com/open-z/jeff-ci/gh/auth"
 
@@ -18,7 +19,14 @@ func GetBranches() ([]*github.Branch, error) {
 		context.TODO(),
 		config.Owner(),
 		config.Repo(),
-		nil,
+		&github.BranchListOptions{
+			nil,
+			//TODO: Need to deal with pagination
+			github.ListOptions{
+				Page:    1,
+				PerPage: 100,
+			},
+		},
 	)
 
 	return branches, err
